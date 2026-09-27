@@ -58,6 +58,9 @@ dotnet test tests/JupyterNet.Tests
 # headless: run a notebook's cells top to bottom from the CLI
 dotnet run --project src/JupyterNet.Cli -- run samples/tour.ipynb
 
+# or install it as a real `jupyternet` command (see Publishing below), then just:
+jupyternet run samples/tour.ipynb
+
 # smoke-test the host directly (see docs/protocol.md for the message shapes)
 echo '{"id":"1","method":"execute","params":{"kernel":"csharp","code":"21 * 2"}}' | dotnet run --project src/JupyterNet.Host
 
@@ -78,3 +81,12 @@ where the extension/CLI expect to find them (`jupyternet.kernelPaths`/`--kernel-
 `Kernels.Abstractions`, `Kernels.CSharp`, `Kernels.FSharp`, `Engine`, `Host`, `Cli`) into
 `D:\dev\NuGetLocalFeed`. `build/package-extension.ps1` publishes `JupyterNet.Host` *and* the three
 external kernel plugins into `vscode-extension/host/`, then packages the extension as a `.vsix`.
+
+`JupyterNet.Cli` packs as a real `dotnet tool` (`jupyternet` on PATH), the same pattern PySharp/
+Ontly/RalfAI already use for `pysharp`/`ontly`/`ralf`:
+
+```powershell
+./build/pack.ps1
+dotnet tool install --global --add-source D:\dev\NuGetLocalFeed JupyterNet.Cli   # first time
+dotnet tool update  --global --add-source D:\dev\NuGetLocalFeed JupyterNet.Cli   # after a rebuild
+```

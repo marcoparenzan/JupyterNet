@@ -45,17 +45,25 @@ with no further setup; `pysharp`/`ontly`/`ralf` need the plugin publish step abo
 ## Run a notebook headlessly (CLI)
 
 No VS Code, no editor — `jupyternet run` executes a `.ipynb`'s cells top to bottom and exits `0`
-only if every one of them ran without error (handy in CI, or just from a terminal):
+only if every one of them ran without error (handy in CI, or just from a terminal). Install it once
+as a real command (same pattern as `pysharp`/`ontly`/`ralf`), or use `dotnet run` straight from the
+repo while developing:
 
 ```powershell
-dotnet run --project src/JupyterNet.Cli -- run samples/tour.ipynb
+# once, from the repo root:
+./build/pack.ps1
+dotnet tool install --global --add-source D:\dev\NuGetLocalFeed JupyterNet.Cli
+# after changing the CLI/Engine/a builtin kernel, re-pack then:
+dotnet tool update --global --add-source D:\dev\NuGetLocalFeed JupyterNet.Cli
+
+jupyternet run samples/tour.ipynb
+# or, without installing: dotnet run --project src/JupyterNet.Cli -- run samples/tour.ipynb
 
 # pysharp/ontly/ralf need the same plugin paths as the host/extension:
-dotnet run --project src/JupyterNet.Cli -- run samples/tour.ipynb `
-  --kernel-paths "D:\dev\2026\repos\PySharp\src\JupyterNet.Kernels.PySharp\bin\publish;D:\dev\2026\repos\ontly\src\JupyterNet.Kernels.Ontly\bin\publish;D:\dev\MarcoParenzan\RalfAI\src\JupyterNet.Kernels.Ralf\bin\publish"
+jupyternet run samples/tour.ipynb --kernel-paths "D:\dev\2026\repos\PySharp\src\JupyterNet.Kernels.PySharp\bin\publish;D:\dev\2026\repos\ontly\src\JupyterNet.Kernels.Ontly\bin\publish;D:\dev\MarcoParenzan\RalfAI\src\JupyterNet.Kernels.Ralf\bin\publish"
 
 # --output writes the executed notebook (with real outputs) elsewhere; --in-place overwrites the input
-dotnet run --project src/JupyterNet.Cli -- run samples/tour.ipynb --output executed.ipynb
+jupyternet run samples/tour.ipynb --output executed.ipynb
 ```
 
 `--fail-fast` stops at the first cell whose output is an error instead of running the rest.
