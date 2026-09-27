@@ -19,13 +19,21 @@ public sealed class FSharpKernel : IKernel
 
     public FSharpKernel()
     {
+        // FsiEvaluationSession.Create's own outWriter/errorWriter are where FSI writes its own
+        // REPL echo ("val x: int = 21" for every top-level binding/expression — genuine FSI
+        // behavior, the same thing `dotnet fsi` shows in a terminal). `Settings.fsi.
+        // ShowDeclarationValues = false` looked like the "real" switch for that but turned out
+        // inconsistent in practice (it drops the value from a `let` binding's echo but not from an
+        // expression's `it` binding). Discarding FSI's own writers entirely is simpler and
+        // complete: what a cell "printed" is defined as what `printfn`/`Console.Write` wrote via
+        // the *real* `Console.Out`, captured below by redirecting it — never what FSI echoes.
         var config = FsiEvaluationSession.GetDefaultConfiguration();
         _session = FsiEvaluationSession.Create(
             config,
             ["fsi.exe", "--noninteractive", "--nologo", "--gui-"],
             new StringReader(""),
-            _stdout,
-            _stderr,
+            TextWriter.Null,
+            TextWriter.Null,
             collectible: null,
             legacyReferenceResolver: null);
     }
@@ -35,11 +43,10 @@ public sealed class FSharpKernel : IKernel
         _stdout.GetStringBuilder().Clear();
         _stderr.GetStringBuilder().Clear();
 
-        // FsiEvaluationSession's outWriter/errorWriter only capture FSI's own echo ("val x: int =
-        // 21") — plain `printfn`/`Console.Write` inside the evaluated code still targets the real
-        // process Console.Out (that's what `printfn` resolves to), which is also JupyterNet.Host's
-        // own NDJSON stdout. So Console.Out/Error are redirected here for the duration of exactly
-        // this one call and restored immediately after, never left swapped for other kernels/cells.
+        // `printfn`/`Console.Write` inside the evaluated code target the real process Console.Out
+        // (that's what `printfn` resolves to), which is also JupyterNet.Host's own NDJSON stdout.
+        // So Console.Out/Error are redirected here for the duration of exactly this one call and
+        // restored immediately after, never left swapped for other kernels/cells.
         var previousOut = Console.Out;
         var previousError = Console.Error;
         Tuple<FSharpChoice<FSharpOption<FsiValue>?, Exception>, global::FSharp.Compiler.Diagnostics.FSharpDiagnostic[]> evaluation;
@@ -64,10 +71,18 @@ public sealed class FSharpKernel : IKernel
             return Task.CompletedTask;
         }
 
-        // FSI's own evaluation already echoes each binding ("val x: int = 21"), so the captured
-        // text alone is the cell's output — no separate print of outcome's FsiValue needed.
+        // Captured stdout is exactly what the cell itself printed (printfn/Console.Write) — FSI's
+        // own echo went to a discarded writer.
         var text = _stdout.ToString();
         if (text.Length > 0) sink.WriteText(text);
+
+        // A `let` binding has no value here (None); an expression does (Some) — mirrors the C#
+        // kernel's "last expression's value becomes the cell's result" behavior.
+        if (outcome is FSharpChoice<FSharpOption<FsiValue>?, Exception>.Choice1Of2 { Item: { } option } &&
+            option.Value.ReflectionValue is { } value)
+        {
+            sink.WriteText(value.ToString() ?? "");
+        }
 
         var errorText = _stderr.ToString();
         if (errorText.Length > 0) sink.WriteText(errorText);

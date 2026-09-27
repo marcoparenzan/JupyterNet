@@ -60,13 +60,21 @@ gotten right that a first pass at the API didn't get for free:
 - `EvalInteractionNonThrowing` returns `Tuple<FSharpChoice<FSharpOption<FsiValue>?, Exception>,
   FSharpDiagnostic[]>` — the outer `FSharpChoice` is success/failure, and on success the *inner*
   `FSharpOption<FsiValue>` is itself `None` for a non-expression interaction (e.g. `let x = 5`),
-  `Some` for an expression. Both option layers need unwrapping.
-- `EvalInteractionNonThrowing`'s own `outWriter`/`errorWriter` only capture FSI's *own* echo
-  (`val x: int = 21`) — plain `printfn`/`Console.Write` inside evaluated code still targets the
-  real process `Console.Out`, which is also `JupyterNet.Host`'s own NDJSON stdout. `FSharpKernel`
-  swaps `Console.Out`/`Console.Error` for the duration of exactly one `EvalInteractionNonThrowing`
-  call and restores them immediately after (never left swapped for other kernels/cells — a
-  permanent swap would silently break the host's own protocol output for everything else).
+  `Some` for an expression. Both option layers need unwrapping — and that `Some`/`None` split is
+  also how the cell's "result" is decided: when `Some`, its `ReflectionValue` is written as text,
+  the same "last expression's value becomes the cell's output" role the C# kernel's `ReturnValue`
+  plays.
+- Left alone, every top-level binding/expression makes FSI auto-print its own echo (`val x: int =
+  21`) — genuine, if noisy, FSI/REPL behavior. `FsiEvaluationSession.Create`'s `outWriter`/
+  `errorWriter` are where that echo goes, so `FSharpKernel` passes `TextWriter.Null` for both and
+  discards it entirely, rather than trying to filter it back out of captured text (a `Settings.fsi.
+  ShowDeclarationValues = false` toggle exists and looked like the real switch, but proved
+  inconsistent — it drops the value from a `let` binding's echo but not from an expression's `it`
+  binding). What a cell actually "printed" is defined purely as what `printfn`/`Console.Write`
+  wrote to the *real* `Console.Out` — captured by swapping `Console.Out`/`Console.Error` for the
+  duration of exactly one `EvalInteractionNonThrowing` call and restoring them immediately after
+  (never left swapped for other kernels/cells — a permanent swap would silently break the host's
+  own protocol output for everything else).
 
 **PySharp** (plugin, `D:\dev\2026\repos\PySharp\src\JupyterNet.Kernels.PySharp`) — one `PyEngine`
 per session. `PyEngine.Run` always starts a fresh `__main__` module seeded only from
@@ -187,5 +195,5 @@ of its kernel id actually executes in a session; `csharp`/`fsharp` need no disco
 - The VS Code extension compiles cleanly and the host (builtin kernels + all three plugins,
   including the exact cell sequence in `samples/tour.ipynb`) was exercised end to end via direct
   NDJSON smoke tests *and*, separately, confirmed by hand in the installed extension: an F# cell
-  in `samples/tour.ipynb`, run for real, showing FSI's own echo (`val greeting: string = ...`) and
-  `printfn` output together, exactly matching the NDJSON-level test.
+  in `samples/tour.ipynb`, run for real (at the time still showing FSI's own `val x: T = ...` echo
+  alongside `printfn` output — since quieted, see "Left alone..." above).

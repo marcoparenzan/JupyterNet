@@ -157,3 +157,26 @@ it.
   installed extension — output matched the NDJSON-level test exactly (`printfn` output plus FSI's
   own `val greeting: string = ...`/`val it: unit = ()` echo). The one remaining "not verified
   through the actual UI" gap from the previous round is closed.
+
+## Quieting FSI's echo
+
+That same screenshot prompted the obvious question: "ma perché mostra il codice?" — why does it
+show the code? It didn't — `val greeting: string = "hello from F#"` is FSI's own REPL echo of the
+binding it just made, not source code — but it reads as noise/clutter next to genuine `printfn`
+output, and Marco asked to suppress it, "magari c'è un flag da esplicitare?" (maybe there's a flag
+to make explicit) rather than patching over it by filtering text.
+
+There is a real one — `Settings.fsi.ShowDeclarationValues` — found by decompiling
+`FSharp.Compiler.Service.dll` with `ilspycmd` (already sitting in the RalfAI repo's `ops/tools/`,
+useful again here) rather than guessing at an undocumented API. It turned out to be the wrong tool
+for the job: it drops the `= value` part of a `let` binding's echo but not of an expression's `it`
+binding, verified by testing both cases directly. The complete, deterministic fix ended up
+smaller: `FsiEvaluationSession.Create`'s own `outWriter`/`errorWriter` — where FSI's echo actually
+goes — get `TextWriter.Null` instead, so it's discarded outright; a cell's captured output is
+exactly what `printfn`/`Console.Write` sent to the real (redirected) `Console.Out`. That also
+meant the kernel needed to explicitly print the last expression's value again — something FSI's
+echo had been doing for free, so removing the echo without replacing that would have made bare
+expression cells go silent (`greeting.ToUpper()` printing nothing at all), unlike every other
+kernel here. Fixed and verified before shipping: `printfn` output alone, then the bare value for
+an expression cell, then a divide-by-zero still reported as a proper `WriteError` — no leftover
+`val x: T = ...` noise anywhere.

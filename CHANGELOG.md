@@ -15,7 +15,8 @@
 - Added a builtin **`fsharp`** kernel (`FSharp.Compiler.Service`'s `FsiEvaluationSession`) — a real
   FSI session, so cross-cell state persistence needs no workaround the way PySharp's does.
   VB.NET was considered and dropped: Roslyn has no scripting/REPL API for VB shaped like
-  `CSharpScript`.
+  `CSharpScript`. FSI's own `val x: T = ...` echo is discarded (`TextWriter.Null`) rather than
+  shown — a cell's output is exactly what it printed, plus the last expression's value.
 - `vscode-extension`: added `jupyternet.kernelPaths` (forwarded to the host as
   `JUPYTERNET_KERNEL_PATHS`), `fsharp` in `supportedLanguages`; `build/package-extension.ps1` now
   also publishes the three plugins into `vscode-extension/host/kernels/*` for a self-contained
