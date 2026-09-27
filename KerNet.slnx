@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/KerNet.Host/KerNet.Host.csproj" />
+    <Project Path="src/KerNet.Kernels.Abstractions/KerNet.Kernels.Abstractions.csproj" />
+    <Project Path="src/KerNet.Kernels.CSharp/KerNet.Kernels.CSharp.csproj" />
+    <Project Path="src/KerNet.Kernels.Ontly/KerNet.Kernels.Ontly.csproj" />
+    <Project Path="src/KerNet.Kernels.PySharp/KerNet.Kernels.PySharp.csproj" />
+    <Project Path="src/KerNet.Kernels.Ralf/KerNet.Kernels.Ralf.csproj" />
+    <Project Path="src/KerNet.Protocol/KerNet.Protocol.csproj" />
+  </Folder>
+</Solution>

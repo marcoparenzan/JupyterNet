@@ -1,0 +1,39 @@
+{
+  "cells": [
+    {
+      "kind": "markup",
+      "language": "markdown",
+      "value": "# KerNet tour\n\nOne cell per kernel: C# (Roslyn scripting), PySharp (a from-scratch Python interpreter), Ontly (a YAML domain-contract compiler) and Ralf (RalfAI's agent, wired into this very notebook). Run them top to bottom."
+    },
+    {
+      "kind": "code",
+      "language": "csharp",
+      "value": "var greeting = \"hello from C#\";\nDisplay.Html($\"<b>{greeting}</b>\");\ngreeting.Length"
+    },
+    {
+      "kind": "code",
+      "language": "csharp",
+      "value": "// `greeting` is still here — session state persists across cells.\ngreeting.ToUpper()"
+    },
+    {
+      "kind": "code",
+      "language": "pysharp",
+      "value": "message = \"hello from PySharp\"\nprint(message)\ndisplay_html(f\"<i>{message}</i>\")"
+    },
+    {
+      "kind": "code",
+      "language": "pysharp",
+      "value": "# `message` from the previous cell is still here too.\nprint(message.upper())"
+    },
+    {
+      "kind": "code",
+      "language": "ontly",
+      "value": "context: tour\nnamespace: KerNet.Tour\nscalars:\n  Email:\n    base: string\n    maxLength: 200\ntypes:\n  Person:\n    kind: dto\n    attributes:\n      name: string\n      email: Email\n"
+    },
+    {
+      "kind": "code",
+      "language": "ralf",
+      "value": "List the cells in this notebook, then run the first PySharp cell and tell me what it printed."
+    }
+  ]
+}

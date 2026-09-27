@@ -1,0 +1,74 @@
+{
+  "name": "kernet-notebook",
+  "displayName": "KerNet Notebook",
+  "description": "C#, PySharp, Ontly and Ralf notebooks in VS Code, backed by a KerNet.Host process.",
+  "version": "0.1.0",
+  "publisher": "marcoparenzan",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": ["Notebooks", "Programming Languages", "Machine Learning"],
+  "activationEvents": [
+    "onNotebook:kernet-notebook"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "notebooks": [
+      {
+        "type": "kernet-notebook",
+        "displayName": "KerNet Notebook",
+        "selector": [{ "filenamePattern": "*.kernet" }]
+      }
+    ],
+    "notebookRenderer": [
+      {
+        "id": "kernet-html-renderer",
+        "displayName": "KerNet HTML output",
+        "entrypoint": "./out/renderer/index.js",
+        "mimeTypes": ["text/html"]
+      }
+    ],
+    "languages": [
+      { "id": "csharp", "extensions": [".cs"] },
+      { "id": "pysharp", "aliases": ["PySharp"] },
+      { "id": "ontly", "aliases": ["Ontly"] },
+      { "id": "ralf", "aliases": ["Ralf"] }
+    ],
+    "commands": [
+      {
+        "command": "kernet.newNotebook",
+        "title": "KerNet: New Notebook",
+        "category": "KerNet"
+      },
+      {
+        "command": "kernet.restartHost",
+        "title": "KerNet: Restart Kernel Host",
+        "category": "KerNet"
+      }
+    ],
+    "configuration": {
+      "title": "KerNet",
+      "properties": {
+        "kernet.hostDll": {
+          "type": "string",
+          "default": "",
+          "description": "Path to KerNet.Host.dll. Empty uses the copy bundled with the extension (host/KerNet.Host.dll)."
+        },
+        "kernet.dotnetPath": {
+          "type": "string",
+          "default": "dotnet",
+          "description": "The 'dotnet' executable used to run KerNet.Host."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -w -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/vscode": "^1.90.0",
+    "typescript": "^5.5.0"
+  }
+}

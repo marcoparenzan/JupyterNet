@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>KerNet.Protocol</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Marco Parenzan</Authors>
+    <Description>NDJSON message contracts shared by KerNet.Host and the KerNet VS Code extension.</Description>
+  </PropertyGroup>
+
+</Project>

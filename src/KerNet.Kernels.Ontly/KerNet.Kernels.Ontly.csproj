@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>KerNet.Kernels.Ontly</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Marco Parenzan</Authors>
+    <Description>KerNet kernel that compiles Ontly YAML contracts (Ontly.Domain.ContractCompiler) and renders the generated C#/Python and diagnostics as HTML.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Ontly.Domain" Version="0.1.0" />
+    <PackageReference Include="Ontly.CSharp" Version="0.1.0" />
+    <PackageReference Include="Ontly.Python" Version="0.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\KerNet.Kernels.Abstractions\KerNet.Kernels.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

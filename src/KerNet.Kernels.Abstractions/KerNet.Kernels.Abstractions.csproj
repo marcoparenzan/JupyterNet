@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>KerNet.Kernels.Abstractions</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Marco Parenzan</Authors>
+    <Description>IKernel / IKernelOutputSink contracts every KerNet.Kernels.* implementation targets.</Description>
+  </PropertyGroup>
+
+</Project>
