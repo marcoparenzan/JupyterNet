@@ -70,7 +70,16 @@ the `ralf` kernel's tools can know what else is in the notebook without a separa
   error), and — using the RalfAI configuration already set up on this machine — a real `ralf` cell
   that called `Notebook_ListCells` and `Notebook_RunCell` against a live PySharp cell and reported
   its actual output back in natural language.
-- **Not verified**: the VS Code extension itself. Node.js is not installed on this machine, so
-  `npm install`/`tsc`/an Extension Development Host run were never executed — the TypeScript was
-  written and reviewed by hand only. Treat that half of the project as unverified until it's
-  actually compiled and run once Node.js is available.
+- After Marco installed Node.js/npm mid-session: `npm install && npm run compile` — clean, zero
+  TypeScript errors, confirming the hand-written extension code against the real `vscode` API
+  types. That run also caught one real bug: a planned `kernet.hostDll` default in
+  `.vscode/settings.json` using `${workspaceFolder}` would *not* have worked (VS Code only
+  substitutes that in `launch.json`/`tasks.json`, not in arbitrary extension settings) — replaced
+  with an `resolveHostDll` fallback in `kernelController.ts` that checks the filesystem itself
+  (bundled path → repo Debug/Release build → error), and added a proper `launch.json` so F5 in
+  `vscode-extension/` actually runs `npm: compile` then opens `samples/tour.kernet`.
+- **Still not verified**: an actual Extension Development Host session (F5) with a cell run by
+  hand. An attempt to script this via `code --extensionDevelopmentPath=... --new-window ...` from
+  the sandboxed shell opened a plain new window without the dev flags taking effect (most likely
+  argument handling by the `code` CLI shim in that shell, not a problem with the extension) — worth
+  retrying directly from a normal terminal/VS Code's own F5, not through that path.

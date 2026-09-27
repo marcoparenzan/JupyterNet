@@ -98,6 +98,7 @@ why that step existed and what it touched in the RalfAI repo (metadata only, no 
 - `Notebook_SetCellCode`'s effect is only visible to Ralf's *next* tool call in the same turn once
   the extension has applied the edit and a subsequent execute request has refreshed the cache —
   not instantaneous within the same tool call.
-- The VS Code extension was written and reviewed by hand but not compiled/run in this environment
-  (no Node.js install here — see USAGE.md) — treat first-run friction there as expected, not a sign
-  the design is wrong.
+- The VS Code extension compiles cleanly (`npm install && npm run compile`, verified) but has not
+  been driven end to end through an actual Extension Development Host session (F5) — do that
+  before trusting the notebook UI itself, not just the two halves (host process, TypeScript) it's
+  built from.

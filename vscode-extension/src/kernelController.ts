@@ -1,3 +1,4 @@
+import * as fs from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
 import { HostClient } from "./hostClient";
@@ -60,8 +61,25 @@ export class KerNetController implements vscode.Disposable {
         return client;
     }
 
+    /**
+     * `kernet.hostDll` wins if set. Otherwise prefer the copy bundled next to the extension
+     * (`host/KerNet.Host.dll`, produced by build/package-extension.ps1); if that doesn't exist —
+     * e.g. running the extension straight from source via F5 — fall back to the repo's own
+     * Debug/Release build output, since settings.json values aren't variable-substituted the way
+     * launch.json/tasks.json ones are and so can't point here by themselves.
+     */
     private resolveHostDll(configured: string): string {
-        return configured || path.join(this.context.extensionPath, "host", "KerNet.Host.dll");
+        if (configured) return configured;
+
+        const bundled = path.join(this.context.extensionPath, "host", "KerNet.Host.dll");
+        if (fs.existsSync(bundled)) return bundled;
+
+        for (const configuration of ["Debug", "Release"]) {
+            const devBuild = path.join(this.context.extensionPath, "..", "src", "KerNet.Host", "bin", configuration, "net10.0", "KerNet.Host.dll");
+            if (fs.existsSync(devBuild)) return devBuild;
+        }
+
+        return bundled;
     }
 
     private async applyEditCell(notebook: vscode.NotebookDocument, cellIndex: number, newCode: string): Promise<void> {
