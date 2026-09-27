@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "es2020",
+    "rootDir": "src/renderer",
+    "outDir": "out/renderer"
+  },
+  "include": ["src/renderer/**/*.ts"],
+  "exclude": []
+}

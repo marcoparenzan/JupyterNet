@@ -64,8 +64,8 @@
     }
   },
   "scripts": {
-    "compile": "tsc -p ./",
-    "watch": "tsc -w -p ./"
+    "compile": "tsc -p ./tsconfig.json && tsc -p ./tsconfig.renderer.json",
+    "watch": "tsc -w -p ./tsconfig.json"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
