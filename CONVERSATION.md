@@ -153,5 +153,7 @@ it.
   a warning and leaves that kernel id unavailable rather than crashing the host.
 - `npm run compile` after all the extension-side changes (`jupyternet.kernelPaths`, `fsharp` in
   `supportedLanguages`) — clean.
-- **Still not verified**: an actual Extension Development Host/installed-extension session with a
-  human running these cells by hand in the notebook UI — same gap noted after the previous round.
+- Marco then closed the loop himself: ran the F# cell in `samples/tour.ipynb` for real, in the
+  installed extension — output matched the NDJSON-level test exactly (`printfn` output plus FSI's
+  own `val greeting: string = ...`/`val it: unit = ()` echo). The one remaining "not verified
+  through the actual UI" gap from the previous round is closed.

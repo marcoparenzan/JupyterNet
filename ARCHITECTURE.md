@@ -184,8 +184,8 @@ of its kernel id actually executes in a session; `csharp`/`fsharp` need no disco
   versions of the same dependency would collide (see "Why not per-plugin `AssemblyLoadContext`
   isolation" above). Native-library dependencies (e.g. under `runtimes/<rid>/native/`) still need
   the OS loader to find them through its own mechanism regardless.
-- The VS Code extension compiles cleanly (`npm install && npm run compile`, verified) and the host
-  (builtin kernels + all three plugins, including the exact cell sequence in `samples/tour.ipynb`)
-  was exercised end to end via direct NDJSON smoke tests, but the notebook UI itself has not yet
-  been driven through an actual Extension Development Host or installed-extension session with a
-  human clicking "run cell" — do that before trusting the UI half specifically.
+- The VS Code extension compiles cleanly and the host (builtin kernels + all three plugins,
+  including the exact cell sequence in `samples/tour.ipynb`) was exercised end to end via direct
+  NDJSON smoke tests *and*, separately, confirmed by hand in the installed extension: an F# cell
+  in `samples/tour.ipynb`, run for real, showing FSI's own echo (`val greeting: string = ...`) and
+  `printfn` output together, exactly matching the NDJSON-level test.
