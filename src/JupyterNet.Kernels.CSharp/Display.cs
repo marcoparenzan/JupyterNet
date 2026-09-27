@@ -1,4 +1,4 @@
-namespace KerNet.Kernels.CSharp;
+namespace JupyterNet.Kernels.CSharp;
 
 /// <summary>
 /// Lets a C# cell push rich output explicitly, e.g. <c>Display.Html("&lt;b&gt;hi&lt;/b&gt;")</c>.

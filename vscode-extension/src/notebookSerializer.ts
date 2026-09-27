@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 
 /**
- * Real Jupyter nbformat v4 (`.ipynb`) — so a KerNet notebook opens, renders and diffs like any
+ * Real Jupyter nbformat v4 (`.ipynb`) — so a JupyterNet notebook opens, renders and diffs like any
  * other notebook file, not a bespoke format only this extension understands. Per-cell language is
  * the one thing plain nbformat has no field for (a `.ipynb` normally has one language for the
  * whole file, in `metadata.language_info`): stored per cell under `metadata.vscode.languageId`,
@@ -38,7 +38,7 @@ interface NbFormat {
 const DEFAULT_CODE_LANGUAGE = "csharp";
 const ERROR_MIME = "application/vnd.code.notebook.error";
 
-export class KerNetNotebookSerializer implements vscode.NotebookSerializer {
+export class JupyterNetNotebookSerializer implements vscode.NotebookSerializer {
     deserializeNotebook(content: Uint8Array): vscode.NotebookData {
         const text = Buffer.from(content).toString("utf8").trim();
         const nb: NbFormat = text.length === 0 ? emptyNotebook() : JSON.parse(text);
@@ -61,8 +61,8 @@ export class KerNetNotebookSerializer implements vscode.NotebookSerializer {
             cells: data.cells.map(toNbCell),
             metadata: {
                 ...(data.metadata ?? {}),
-                kernelspec: { name: "kernet", display_name: "KerNet", language: "kernet" },
-                language_info: { name: "kernet" }
+                kernelspec: { name: "jupyternet", display_name: "JupyterNet", language: "jupyternet" },
+                language_info: { name: "jupyternet" }
             },
             nbformat: 4,
             nbformat_minor: 5

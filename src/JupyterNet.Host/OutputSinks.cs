@@ -1,8 +1,8 @@
 using System.Text;
-using KerNet.Kernels.Abstractions;
-using KerNet.Protocol;
+using JupyterNet.Kernels.Abstractions;
+using JupyterNet.Protocol;
 
-namespace KerNet.Host;
+namespace JupyterNet.Host;
 
 /// <summary>Writes a kernel's output as NDJSON events on the host's real stdout, tagged with the request id.</summary>
 internal sealed class NdjsonOutputSink(TextWriter stdout, string executionId) : IKernelOutputSink

@@ -5,7 +5,7 @@ import { ExecuteParams, HostEvent, HostRequest, NotebookCellSnapshot } from "./p
 export type EditCellHandler = (cellIndex: number, newCode: string) => void;
 
 /**
- * One KerNet.Host process per open notebook, talking NDJSON over its stdin/stdout. `execute`
+ * One JupyterNet.Host process per open notebook, talking NDJSON over its stdin/stdout. `execute`
  * resolves once the matching "complete" event comes back; every event in between (including
  * more than one "output") is streamed to `onEvent` as it arrives. "editCell" events are not tied
  * to a specific `execute` call (the host sends `executionId: ""` for them — see
@@ -17,8 +17,8 @@ export class HostClient {
     private readonly pending = new Map<string, (evt: HostEvent) => void>();
     private readonly editCellHandlers: EditCellHandler[] = [];
 
-    constructor(dotnetPath: string, hostDllPath: string, cwd: string, onStderr: (text: string) => void) {
-        this.process = cp.spawn(dotnetPath, [hostDllPath], { cwd });
+    constructor(dotnetPath: string, hostDllPath: string, cwd: string, env: NodeJS.ProcessEnv, onStderr: (text: string) => void) {
+        this.process = cp.spawn(dotnetPath, [hostDllPath], { cwd, env });
         const rl = readline.createInterface({ input: this.process.stdout });
         rl.on("line", (line) => this.onLine(line));
         this.process.stderr.on("data", (chunk: Buffer) => onStderr(chunk.toString()));

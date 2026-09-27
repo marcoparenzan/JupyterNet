@@ -1,11 +1,11 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace KerNet.Protocol;
+namespace JupyterNet.Protocol;
 
 /// <summary>
 /// Reads/writes <see cref="HostRequest"/>/<see cref="HostEvent"/> as one JSON object per line
-/// (NDJSON) — the whole wire format between <c>KerNet.Host</c> and the VS Code extension.
+/// (NDJSON) — the whole wire format between <c>JupyterNet.Host</c> and the VS Code extension.
 /// </summary>
 public static class NdjsonProtocol
 {

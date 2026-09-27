@@ -7,10 +7,10 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <PackageId>KerNet.Kernels.CSharp</PackageId>
+    <PackageId>JupyterNet.Kernels.CSharp</PackageId>
     <Version>0.1.0</Version>
     <Authors>Marco Parenzan</Authors>
-    <Description>KerNet kernel that runs C# cells via Roslyn scripting, with session state shared across cells.</Description>
+    <Description>JupyterNet kernel that runs C# cells via Roslyn scripting, with session state shared across cells.</Description>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\KerNet.Kernels.Abstractions\KerNet.Kernels.Abstractions.csproj" />
+    <ProjectReference Include="..\JupyterNet.Kernels.Abstractions\JupyterNet.Kernels.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

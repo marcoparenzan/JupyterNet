@@ -1,4 +1,4 @@
-namespace KerNet.Kernels.Abstractions;
+namespace JupyterNet.Kernels.Abstractions;
 
 /// <summary>A cell as the host currently knows it — refreshed from the extension on every execute request.</summary>
 public sealed record NotebookCellInfo(int Index, string Language, string Code);

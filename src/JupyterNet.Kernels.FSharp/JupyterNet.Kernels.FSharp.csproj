@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>JupyterNet.Kernels.FSharp</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Marco Parenzan</Authors>
+    <Description>JupyterNet kernel that runs F# cells via FSharp.Compiler.Service's interactive (FSI) session, with session state shared across cells for free (a real REPL session, unlike PySharp's PyEngine).</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\JupyterNet.Kernels.Abstractions\JupyterNet.Kernels.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FSharp.Compiler.Service" Version="43.12.401" />
+  </ItemGroup>
+
+</Project>

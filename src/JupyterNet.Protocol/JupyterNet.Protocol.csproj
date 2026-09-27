@@ -7,10 +7,10 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <PackageId>KerNet.Kernels.Abstractions</PackageId>
+    <PackageId>JupyterNet.Protocol</PackageId>
     <Version>0.1.0</Version>
     <Authors>Marco Parenzan</Authors>
-    <Description>IKernel / IKernelOutputSink contracts every KerNet.Kernels.* implementation targets.</Description>
+    <Description>NDJSON message contracts shared by JupyterNet.Host and the JupyterNet VS Code extension.</Description>
   </PropertyGroup>
 
 </Project>

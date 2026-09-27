@@ -1,24 +1,31 @@
 using System.Text;
-using KerNet.Host;
-using KerNet.Kernels.Abstractions;
-using KerNet.Kernels.CSharp;
-using KerNet.Kernels.Ontly;
-using KerNet.Kernels.PySharp;
-using KerNet.Kernels.Ralf;
-using KerNet.Protocol;
+using JupyterNet.Host;
+using JupyterNet.Kernels.Abstractions;
+using JupyterNet.Kernels.CSharp;
+using JupyterNet.Kernels.FSharp;
+using JupyterNet.Protocol;
 
 var stdout = Console.Out;
 var kernels = new Dictionary<string, IKernel>();
 NotebookHostState? notebookState = null;
 
-IKernel GetOrCreateKernel(string id) => kernels.TryGetValue(id, out var existing) ? existing : kernels[id] = id switch
+// csharp/fsharp are builtin — the two ".NET languages" JupyterNet.Host ships with directly.
+// Everything else (pysharp/ontly/ralf, by convention, though a plugin can declare any id) is
+// discovered from JUPYTERNET_KERNEL_PATHS/`kernels/*` at startup — see KernelPluginLoader.
+var plugins = KernelPluginLoader.DiscoverPlugins(Console.Error);
+
+IKernel GetOrCreateKernel(string id)
 {
-    KernelIds.CSharp => new CSharpKernel(),
-    KernelIds.PySharp => new PySharpKernel(),
-    KernelIds.Ontly => new OntlyKernel(),
-    KernelIds.Ralf => new RalfKernel(notebookState!),
-    _ => throw new InvalidOperationException($"Unknown kernel '{id}'.")
-};
+    if (kernels.TryGetValue(id, out var existing)) return existing;
+    IKernel created = id switch
+    {
+        KernelIds.CSharp => new CSharpKernel(),
+        KernelIds.FSharp => new FSharpKernel(),
+        _ when plugins.TryGetValue(id, out var plugin) => plugin.CreateKernel(notebookState!),
+        _ => throw new InvalidOperationException($"Unknown kernel '{id}'.")
+    };
+    return kernels[id] = created;
+}
 
 notebookState = new NotebookHostState(stdout, GetOrCreateKernel);
 
@@ -35,7 +42,7 @@ while ((line = await stdin.ReadLineAsync()) is not null)
     }
     catch (Exception ex)
     {
-        await Console.Error.WriteLineAsync($"KerNet.Host: malformed request ignored ({ex.Message})");
+        await Console.Error.WriteLineAsync($"JupyterNet.Host: malformed request ignored ({ex.Message})");
         continue;
     }
 

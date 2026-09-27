@@ -1,8 +1,8 @@
-using KerNet.Kernels.Abstractions;
+using JupyterNet.Kernels.Abstractions;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 
-namespace KerNet.Kernels.CSharp;
+namespace JupyterNet.Kernels.CSharp;
 
 /// <summary>
 /// Runs C# cells with Roslyn scripting. Each cell continues the previous
@@ -17,7 +17,7 @@ public sealed class CSharpKernel : IKernel
 
     private static readonly ScriptOptions Options = ScriptOptions.Default
         .WithReferences(typeof(object).Assembly, typeof(Enumerable).Assembly, typeof(Display).Assembly)
-        .WithImports("System", "System.Linq", "System.Collections.Generic", "KerNet.Kernels.CSharp");
+        .WithImports("System", "System.Linq", "System.Collections.Generic", "JupyterNet.Kernels.CSharp");
 
     public async Task ExecuteAsync(string code, IKernelOutputSink sink, CancellationToken cancellationToken)
     {

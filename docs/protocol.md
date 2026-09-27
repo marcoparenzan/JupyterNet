@@ -1,11 +1,11 @@
-# KerNet host protocol
+# JupyterNet host protocol
 
-NDJSON (one JSON object per line) over the stdin/stdout of a `KerNet.Host` process. One host
+NDJSON (one JSON object per line) over the stdin/stdout of a `JupyterNet.Host` process. One host
 process per open notebook; the VS Code extension spawns it and owns its lifetime. No LSP-style
 `Content-Length` framing — line-delimited JSON was simple enough on both the C# and TypeScript
 sides that framing would only have added ceremony for an MVP.
 
-Message shapes are defined once, in C#, in [`src/KerNet.Protocol/Messages.cs`](../src/KerNet.Protocol/Messages.cs);
+Message shapes are defined once, in C#, in [`src/JupyterNet.Protocol/Messages.cs`](../src/JupyterNet.Protocol/Messages.cs);
 [`vscode-extension/src/protocol.ts`](../vscode-extension/src/protocol.ts) mirrors them by hand.
 There is no shared schema/codegen step — if you change one side, change the other.
 
@@ -15,7 +15,7 @@ There is no shared schema/codegen step — if you change one side, change the ot
 // Run a cell. `cells` is the *entire* notebook's current state (index/language/code for every
 // code cell), sent with every request — not just "ralf" ones — so the host's cache of "what does
 // the notebook currently look like" never goes stale. Only the "ralf" kernel's Notebook_* tools
-// read it; the other three kernels ignore the field.
+// read it; the other kernels ignore the field.
 { "id": "3", "method": "execute", "params": { "kernel": "csharp", "code": "1 + 1", "cells": [
   { "index": 0, "language": "csharp", "code": "1 + 1" }
 ] } }
@@ -50,7 +50,9 @@ is not tied to one specific request (see below) and carries `executionId: ""`.
 
 ## Kernel ids
 
-`csharp`, `pysharp`, `ontly`, `ralf` — see `KerNet.Protocol.KernelIds` / `protocol.ts`'s `KernelIds`.
-Each is a language id a notebook cell can be set to; `KerNet.Host` creates the matching `IKernel`
-lazily, the first time that language is used in a session, and keeps it (and its state) for the
-rest of the session.
+`csharp`, `fsharp`, `pysharp`, `ontly`, `ralf` — see `JupyterNet.Protocol.KernelIds` / `protocol.ts`'s
+`KernelIds`. Each is a language id a notebook cell can be set to; `JupyterNet.Host` creates the
+matching `IKernel` lazily, the first time that language is used in a session, and keeps it (and
+its state) for the rest of the session. `csharp`/`fsharp` are builtin; `pysharp`/`ontly`/`ralf` are
+kernel plugins discovered at startup (see ARCHITECTURE.md's "Plugin loading") — the ids here are
+each plugin's own declared `IKernelPlugin.KernelId`, not something the host enforces.

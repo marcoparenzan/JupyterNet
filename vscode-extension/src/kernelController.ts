@@ -4,15 +4,15 @@ import * as vscode from "vscode";
 import { HostClient } from "./hostClient";
 import { HostEvent, NotebookCellSnapshot } from "./protocol";
 
-const SUPPORTED_LANGUAGES = ["csharp", "pysharp", "ontly", "ralf"];
+const SUPPORTED_LANGUAGES = ["csharp", "fsharp", "pysharp", "ontly", "ralf"];
 
 /**
- * One `NotebookController` for all four KerNet languages (matching how a polyglot notebook picks
- * a language per cell rather than per kernel). Keeps one `HostClient` — one `KerNet.Host` process —
+ * One `NotebookController` for all four JupyterNet languages (matching how a polyglot notebook picks
+ * a language per cell rather than per kernel). Keeps one `HostClient` — one `JupyterNet.Host` process —
  * per open notebook document, so kernel session state (C#/PySharp variables, the Ralf agent) lives
  * for as long as the notebook stays open.
  */
-export class KerNetController implements vscode.Disposable {
+export class JupyterNetController implements vscode.Disposable {
     readonly controller: vscode.NotebookController;
     private readonly clients = new Map<string, HostClient>();
     private readonly outputChannel: vscode.OutputChannel;
@@ -20,8 +20,8 @@ export class KerNetController implements vscode.Disposable {
     private readonly disposables: vscode.Disposable[] = [];
 
     constructor(private readonly context: vscode.ExtensionContext) {
-        this.outputChannel = vscode.window.createOutputChannel("KerNet");
-        this.controller = vscode.notebooks.createNotebookController("kernet-controller", "kernet-notebook", "KerNet");
+        this.outputChannel = vscode.window.createOutputChannel("JupyterNet");
+        this.controller = vscode.notebooks.createNotebookController("jupyternet-controller", "jupyternet-notebook", "JupyterNet");
         this.controller.supportedLanguages = SUPPORTED_LANGUAGES;
         this.controller.supportsExecutionOrder = true;
         this.controller.executeHandler = (cells, notebook) => this.executeAll(cells, notebook);
@@ -31,7 +31,7 @@ export class KerNetController implements vscode.Disposable {
         );
     }
 
-    /** Kills and forgets the host process for one notebook — used on close and by "KerNet: Restart Kernel Host". */
+    /** Kills and forgets the host process for one notebook — used on close and by "JupyterNet: Restart Kernel Host". */
     disposeClient(notebook: vscode.NotebookDocument): void {
         const key = notebook.uri.toString();
         this.clients.get(key)?.dispose();
@@ -49,12 +49,15 @@ export class KerNetController implements vscode.Disposable {
         const key = notebook.uri.toString();
         let client = this.clients.get(key);
         if (!client) {
-            const config = vscode.workspace.getConfiguration("kernet");
+            const config = vscode.workspace.getConfiguration("jupyternet");
             const dotnetPath = config.get<string>("dotnetPath", "dotnet");
             const hostDll = this.resolveHostDll(config.get<string>("hostDll", ""));
             const cwd = notebook.uri.scheme === "file" ? path.dirname(notebook.uri.fsPath) : this.context.extensionPath;
+            const kernelPaths = config.get<string[]>("kernelPaths", []);
+            const env = { ...process.env };
+            if (kernelPaths.length > 0) env.JUPYTERNET_KERNEL_PATHS = kernelPaths.join(path.delimiter);
 
-            client = new HostClient(dotnetPath, hostDll, cwd, (text) => this.outputChannel.append(text));
+            client = new HostClient(dotnetPath, hostDll, cwd, env, (text) => this.outputChannel.append(text));
             client.onEditCell((cellIndex, newCode) => void this.applyEditCell(notebook, cellIndex, newCode));
             this.clients.set(key, client);
         }
@@ -62,8 +65,8 @@ export class KerNetController implements vscode.Disposable {
     }
 
     /**
-     * `kernet.hostDll` wins if set. Otherwise prefer the copy bundled next to the extension
-     * (`host/KerNet.Host.dll`, produced by build/package-extension.ps1); if that doesn't exist —
+     * `jupyternet.hostDll` wins if set. Otherwise prefer the copy bundled next to the extension
+     * (`host/JupyterNet.Host.dll`, produced by build/package-extension.ps1); if that doesn't exist —
      * e.g. running the extension straight from source via F5 — fall back to the repo's own
      * Debug/Release build output, since settings.json values aren't variable-substituted the way
      * launch.json/tasks.json ones are and so can't point here by themselves.
@@ -71,11 +74,11 @@ export class KerNetController implements vscode.Disposable {
     private resolveHostDll(configured: string): string {
         if (configured) return configured;
 
-        const bundled = path.join(this.context.extensionPath, "host", "KerNet.Host.dll");
+        const bundled = path.join(this.context.extensionPath, "host", "JupyterNet.Host.dll");
         if (fs.existsSync(bundled)) return bundled;
 
         for (const configuration of ["Debug", "Release"]) {
-            const devBuild = path.join(this.context.extensionPath, "..", "src", "KerNet.Host", "bin", configuration, "net10.0", "KerNet.Host.dll");
+            const devBuild = path.join(this.context.extensionPath, "..", "src", "JupyterNet.Host", "bin", configuration, "net10.0", "JupyterNet.Host.dll");
             if (fs.existsSync(devBuild)) return devBuild;
         }
 

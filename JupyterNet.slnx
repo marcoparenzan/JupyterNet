@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/JupyterNet.Host/JupyterNet.Host.csproj" />
+    <Project Path="src/JupyterNet.Kernels.Abstractions/JupyterNet.Kernels.Abstractions.csproj" />
+    <Project Path="src/JupyterNet.Kernels.CSharp/JupyterNet.Kernels.CSharp.csproj" />
+    <Project Path="src/JupyterNet.Kernels.FSharp/JupyterNet.Kernels.FSharp.csproj" />
+    <Project Path="src/JupyterNet.Protocol/JupyterNet.Protocol.csproj" />
+  </Folder>
+</Solution>

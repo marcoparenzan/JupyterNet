@@ -1,9 +1,16 @@
-namespace KerNet.Protocol;
+namespace JupyterNet.Protocol;
 
-/// <summary>One of the four language ids a KerNet notebook cell can be executed as.</summary>
+/// <summary>
+/// Kernel ids a JupyterNet notebook cell can be executed as. <see cref="CSharp"/>/<see cref="FSharp"/>
+/// are built into <c>JupyterNet.Host</c>; <see cref="PySharp"/>/<see cref="Ontly"/>/<see cref="Ralf"/>
+/// are the ids their respective plugin kernels (living in the PySharp/Ontly/RalfAI repos) declare
+/// via <c>IKernelPlugin.KernelId</c> — listed here only as the conventional defaults, not enforced
+/// by the host, since any plugin can declare any id.
+/// </summary>
 public static class KernelIds
 {
     public const string CSharp = "csharp";
+    public const string FSharp = "fsharp";
     public const string PySharp = "pysharp";
     public const string Ontly = "ontly";
     public const string Ralf = "ralf";
@@ -21,13 +28,13 @@ public sealed record NotebookCellSnapshot(int Index, string Language, string Cod
 public sealed record ExecuteParams(string Kernel, string Code, IReadOnlyList<NotebookCellSnapshot>? Cells = null);
 
 /// <summary>
-/// A request sent by the extension to <c>KerNet.Host</c> on stdin, one JSON object per line.
+/// A request sent by the extension to <c>JupyterNet.Host</c> on stdin, one JSON object per line.
 /// <see cref="Method"/> is <c>"execute"</c> (with <see cref="Params"/> set) or <c>"shutdown"</c>.
 /// </summary>
 public sealed record HostRequest(string Id, string Method, ExecuteParams? Params = null);
 
 /// <summary>
-/// An event emitted by <c>KerNet.Host</c> on stdout, one JSON object per line, correlated to a
+/// An event emitted by <c>JupyterNet.Host</c> on stdout, one JSON object per line, correlated to a
 /// request by <see cref="ExecutionId"/> (the request's <see cref="HostRequest.Id"/>).
 /// </summary>
 public sealed record HostEvent(

@@ -1,7 +1,7 @@
-using KerNet.Kernels.Abstractions;
-using KerNet.Protocol;
+using JupyterNet.Kernels.Abstractions;
+using JupyterNet.Protocol;
 
-namespace KerNet.Host;
+namespace JupyterNet.Host;
 
 /// <summary>
 /// The host's <see cref="INotebookHost"/> implementation: a cache of the notebook's cells (kept
