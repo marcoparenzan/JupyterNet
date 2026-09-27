@@ -1,14 +1,16 @@
 # JupyterNet
 
 A kernel host for **.NET notebooks in VS Code** — the itch [dotnet/interactive](https://github.com/dotnet/interactive)
-left unscratched once it stopped being developed. JupyterNet ships two ".NET languages" itself
-(C#, F#) and is otherwise a small **plugin host**: PySharp, Ontly and Ralf each carry their own
-kernel plugin in their own repo, matching the engine's own release cycle rather than JupyterNet's.
+left unscratched once it stopped being developed. JupyterNet ships three ".NET languages" itself
+(C#, F#, PowerShell) and is otherwise a small **plugin host**: PySharp, Ontly and Ralf each carry
+their own kernel plugin in their own repo, matching the engine's own release cycle rather than
+JupyterNet's.
 
 | Cell language | Backed by |
 | --- | --- |
 | `csharp` | Roslyn scripting (`Microsoft.CodeAnalysis.CSharp.Scripting`) — builtin, a REPL-style C#, variables persist across cells. |
 | `fsharp` | `FSharp.Compiler.Service`'s `FsiEvaluationSession` — builtin, a real long-lived FSI session, so state just persists on its own. |
+| `powershell` | `Microsoft.PowerShell.SDK` — builtin, a real embedded PowerShell 7+ `Runspace`, so state persists the same way. |
 | `pysharp` | Plugin, from `D:\dev\2026\repos\PySharp` — a Python 3 interpreter written from scratch in C#, embedded via `PySharpLib.PyEngine`. |
 | `ontly` | Plugin, from `D:\dev\2026\repos\ontly` — a YAML domain-contract compiler; a cell is a contract, the output is its generated C#/Python. |
 | `ralf` | Plugin, from `D:\dev\MarcoParenzan\RalfAI` — RalfAI's own coding agent, embedded in-process with tools to inspect, run and edit the notebook's *other* cells. |
@@ -25,7 +27,7 @@ inject live objects into a kernel's context — see [samples/EmbeddingSample](sa
 - `src/JupyterNet.Protocol` — the NDJSON message contracts shared by the host and the extension.
 - `src/JupyterNet.Kernels.Abstractions` — `IKernel`/`IKernelOutputSink`/`INotebookHost`/
   `IKernelPlugin`/`IVariableInjectable`, the entire contract a kernel (builtin or plugin) implements.
-- `src/JupyterNet.Kernels.{CSharp,FSharp}` — the two builtin kernels.
+- `src/JupyterNet.Kernels.{CSharp,FSharp,PowerShell}` — the three builtin kernels.
 - `src/JupyterNet.Engine` — the reusable core: `NotebookDocument` (a C# nbformat reader/writer),
   `NotebookSession` (kernel dispatch, plugin discovery, variable injection) — what `JupyterNet.Host`,
   `JupyterNet.Cli`, and any embedding application all build on.
@@ -35,7 +37,7 @@ inject live objects into a kernel's context — see [samples/EmbeddingSample](sa
 - `vscode-extension/` — the VS Code extension: notebook type `jupyternet-notebook` for `*.ipynb`
   files (real Jupyter nbformat, offered as an option rather than hijacking every notebook), one
   multi-language `NotebookController`, an HTML output renderer.
-- `samples/tour.ipynb` — a notebook exercising all five kernels. `samples/EmbeddingSample` — a
+- `samples/tour.ipynb` — a notebook exercising all six kernels. `samples/EmbeddingSample` — a
   console app embedding `JupyterNet.Engine` directly and injecting a live object into a cell.
 - `tests/JupyterNet.Tests` — xUnit coverage for the nbformat reader/writer, both builtin kernels
   (including variable injection), and `NotebookSession`'s dispatch/error handling.
@@ -78,7 +80,8 @@ where the extension/CLI expect to find them (`jupyternet.kernelPaths`/`--kernel-
 ## Publishing
 
 `build/pack.ps1` packs the projects that live in this repo (`JupyterNet.Protocol`,
-`Kernels.Abstractions`, `Kernels.CSharp`, `Kernels.FSharp`, `Engine`, `Host`, `Cli`) into
+`Kernels.Abstractions`, `Kernels.CSharp`, `Kernels.FSharp`, `Kernels.PowerShell`, `Engine`, `Host`,
+`Cli`) into
 `D:\dev\NuGetLocalFeed`. `build/package-extension.ps1` publishes `JupyterNet.Host` *and* the three
 external kernel plugins into `vscode-extension/host/`, then packages the extension as a `.vsix`.
 
@@ -88,5 +91,15 @@ Ontly/RalfAI already use for `pysharp`/`ontly`/`ralf`:
 ```powershell
 ./build/pack.ps1
 dotnet tool install --global --add-source D:\dev\NuGetLocalFeed JupyterNet.Cli   # first time
-dotnet tool update  --global --add-source D:\dev\NuGetLocalFeed JupyterNet.Cli   # after a rebuild
+dotnet tool update  --global --add-source D:\dev\NuGetLocalFeed JupyterNet.Cli   # after bumping <Version>
+```
+
+`dotnet tool update` only notices a *version bump* — re-`pack`ing the exact same `<Version>` (this
+repo hasn't bumped it yet) leaves it reporting "already installed" and running the old bits, the
+same NuGet global-package-cache gotcha Ontly's own `_rules.md` documents. Without a version bump,
+force a real refresh instead:
+
+```powershell
+dotnet tool uninstall --global JupyterNet.Cli
+dotnet tool install --global --add-source D:\dev\NuGetLocalFeed JupyterNet.Cli
 ```

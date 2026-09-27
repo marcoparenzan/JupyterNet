@@ -34,7 +34,7 @@ dotnet test tests/JupyterNet.Tests
 ```
 
 `JupyterNet.Host` reads NDJSON requests on stdin and writes NDJSON events on stdout — see
-[docs/protocol.md](docs/protocol.md). To try it directly without VS Code (`csharp`/`fsharp` work
+[docs/protocol.md](docs/protocol.md). To try it directly without VS Code (`csharp`/`fsharp`/`powershell` work
 with no further setup; `pysharp`/`ontly`/`ralf` need the plugin publish step above and
 `JUPYTERNET_KERNEL_PATHS` pointed at those three `bin/publish` folders, `;`-separated):
 
@@ -53,8 +53,10 @@ repo while developing:
 # once, from the repo root:
 ./build/pack.ps1
 dotnet tool install --global --add-source D:\dev\NuGetLocalFeed JupyterNet.Cli
-# after changing the CLI/Engine/a builtin kernel, re-pack then:
-dotnet tool update --global --add-source D:\dev\NuGetLocalFeed JupyterNet.Cli
+# after changing the CLI/Engine/a builtin kernel, re-pack then (see README.md's Publishing
+# section for why `dotnet tool update` alone isn't enough unless <Version> was bumped):
+dotnet tool uninstall --global JupyterNet.Cli
+dotnet tool install --global --add-source D:\dev\NuGetLocalFeed JupyterNet.Cli
 
 jupyternet run samples/tour.ipynb
 # or, without installing: dotnet run --project src/JupyterNet.Cli -- run samples/tour.ipynb
@@ -103,9 +105,9 @@ dotnet run --project samples/EmbeddingSample
 ```
 
 `SetVariableAsync` only works on a kernel that implements `IVariableInjectable` — today that's
-`csharp` and `fsharp` (the two builtin kernels); a kernel that doesn't throws `NotSupportedException`
+`csharp`, `fsharp` and `powershell` (the three builtin kernels); a kernel that doesn't throws `NotSupportedException`
 rather than silently doing nothing. See ARCHITECTURE.md's "Engine, CLI and embedding" section for
-how each of the two actually makes an injected object usable from cell code.
+how each of the three actually makes an injected object usable from cell code.
 
 ## Install the VS Code extension
 
@@ -126,7 +128,7 @@ window:
   default for every `.ipynb` in that workspace.
 - Run **JupyterNet: New Notebook**, or open `samples/tour.ipynb` from the repo root.
 - Each cell picks its language from VS Code's usual cell-language picker: `csharp`, `fsharp`,
-  `pysharp`, `ontly` or `ralf`.
+  `powershell`, `pysharp`, `ontly` or `ralf`.
 - Run a cell with the usual ▷ button/`Ctrl+Enter`. The first cell of a session starts a
   `JupyterNet.Host` process for that notebook (visible, if needed, in the **JupyterNet** output channel —
   stderr from the host lands there, including a warning per kernel plugin that failed to load);
@@ -155,6 +157,11 @@ greeting.Length
 ```fsharp
 let greeting = "hello from F#"
 printfn "%s" greeting
+```
+
+```powershell
+$greeting = "hello from PowerShell"
+Write-Host $greeting
 ```
 
 ```pysharp

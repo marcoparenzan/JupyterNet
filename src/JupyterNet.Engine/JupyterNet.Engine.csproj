@@ -17,6 +17,7 @@
     <ProjectReference Include="..\JupyterNet.Kernels.Abstractions\JupyterNet.Kernels.Abstractions.csproj" />
     <ProjectReference Include="..\JupyterNet.Kernels.CSharp\JupyterNet.Kernels.CSharp.csproj" />
     <ProjectReference Include="..\JupyterNet.Kernels.FSharp\JupyterNet.Kernels.FSharp.csproj" />
+    <ProjectReference Include="..\JupyterNet.Kernels.PowerShell\JupyterNet.Kernels.PowerShell.csproj" />
   </ItemGroup>
 
 </Project>

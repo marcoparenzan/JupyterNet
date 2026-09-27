@@ -16,7 +16,7 @@ NDJSON protocol wrapped around it. A kernel instance, created lazily on first us
 rest of the session, *is* the cell's session state (Roslyn's `ScriptState`, the F#
 `FsiEvaluationSession`, PySharp's `PyEngine.Globals`, the Ralf `AgentEngine`).
 
-## Kernels: two builtin, three plugins
+## Kernels: three builtin, three plugins
 
 `IKernel`/`IKernelOutputSink`/`IKernelPlugin`
 ([src/JupyterNet.Kernels.Abstractions](src/JupyterNet.Kernels.Abstractions)) is the entire contract
@@ -49,10 +49,11 @@ interface IVariableInjectable
 implement it simply doesn't support injection, and `NotebookSession.SetVariableAsync` throws a
 clear `NotSupportedException` rather than pretending it worked.
 
-`csharp` and `fsharp` are **builtin** — compiled straight into `JupyterNet.Host`, no discovery
-needed. `pysharp`/`ontly`/`ralf` are **plugins**: each lives in its own engine's repo (PySharp/
-Ontly/RalfAI), builds a small project implementing `IKernelPlugin`, and gets loaded into the host
-at runtime — see "Plugin loading" below for why they're split out this way and how it works.
+`csharp`, `fsharp` and `powershell` are **builtin** — compiled straight into `JupyterNet.Host`, no
+discovery needed. `pysharp`/`ontly`/`ralf` are **plugins**: each lives in its own engine's repo
+(PySharp/Ontly/RalfAI), builds a small project implementing `IKernelPlugin`, and gets loaded into
+the host at runtime — see "Plugin loading" below for why they're split out this way and how it
+works.
 
 **CSharp** ([src/JupyterNet.Kernels.CSharp](src/JupyterNet.Kernels.CSharp)) — `CSharpScript.RunAsync`
 for the first cell, `ScriptState<object>.ContinueWithAsync` for every one after, so top-level
@@ -112,6 +113,32 @@ the bound name gets the value's *actual* runtime type (via reflection), so membe
 just work with no unwrapping ceremony — confirmed with a `public` class exposing a property, a
 method and an array, all reachable directly (`weather.City`, `weather.TempC(3)`,
 `for x in weather.Forecast do ...`).
+
+**PowerShell** ([src/JupyterNet.Kernels.PowerShell](src/JupyterNet.Kernels.PowerShell)) — a single
+`Runspace` (`Microsoft.PowerShell.SDK` — real PowerShell 7+, not Windows PowerShell 5.1) per
+session; a fresh `System.Management.Automation.PowerShell` pipeline per cell (the API's own
+intended usage — one pipeline per invocation), all running against that same `Runspace`, so `$x`
+set in one cell is still there in the next. `Write-Host` output is captured from
+`pipeline.Streams.Information` (PowerShell 7+ tags it `"PSHOST"` and routes it there specifically
+so a host without a rich UI can still see it — no custom `PSHost` implementation needed, unlike
+what a fuller embedding would typically require) and `Write-Warning` from `Streams.Warning`; the
+pipeline's own return objects (its "last expression" equivalent) are written via `ToString()`,
+same simple convention as the other two builtin kernels. Adding this kernel forced a real
+dependency-version bump: `Microsoft.PowerShell.SDK` transitively needs
+`Microsoft.CodeAnalysis.CSharp >= 5.0.0` (it uses Roslyn internally for its own `Add-Type`
+support), which conflicted with the `= 4.14.0` the C# kernel had pinned via
+`Microsoft.CodeAnalysis.CSharp.Scripting` — resolved by moving that package to its current
+`5.9.0`, re-verified against the full C# kernel test suite (session persistence, `Display.Html`,
+errors, variable injection — all still passing) rather than assumed compatible from the version
+number alone.
+
+**Variable injection** (`IVariableInjectable.SetVariableAsync`) —
+`Runspace.SessionStateProxy.SetVariable(name, value)`, PowerShell's own real API for exactly this. Like F#'s `AddBoundValue`
+and unlike the C# kernel's `dynamic` trick, `$name` afterwards has real member/method access with
+no unwrapping — PowerShell's own dynamically-typed object model makes this the natural case, not a
+special one. Unlike `FSharpKernel`, `PowerShellKernel` never touches `Console.Out`/`Error` (output
+capture goes through `PowerShell.Streams`/the pipeline's return objects instead), so it has none of
+`FSharpKernel`'s concurrent-execution constraint.
 
 **PySharp** (plugin, `D:\dev\2026\repos\PySharp\src\JupyterNet.Kernels.PySharp`) — one `PyEngine`
 per session. `PyEngine.Run` always starts a fresh `__main__` module seeded only from
@@ -192,7 +219,7 @@ embedding application all get it for free):
   the interaction above first.
 
 Kernel instantiation stays lazy exactly as before — a plugin is only loaded the first time a cell
-of its kernel id actually executes in a session; `csharp`/`fsharp` need no discovery step at all.
+of its kernel id actually executes in a session; `csharp`/`fsharp`/`powershell` need no discovery step at all.
 
 ## Engine, CLI and embedding
 
@@ -206,7 +233,7 @@ own inline, so that logic moved to a standalone library, [`JupyterNet.Engine`](s
   (`source` as newline-terminated line arrays, per-cell language in
   `metadata.vscode.languageId`, `display_data`/`error` outputs round-tripped). Nothing in this repo
   read `.ipynb` from C# before this — only the extension's TS side did.
-- **`NotebookSession`** — the reusable engine: owns the builtin (`csharp`/`fsharp`) and
+- **`NotebookSession`** — the reusable engine: owns the builtin (`csharp`/`fsharp`/`powershell`) and
   plugin-discovered kernels for one session, *is* the `INotebookHost` a Ralf-style kernel's tools
   call against (`RequestCellEdit` becomes a plain `CellEditRequested` event instead of an NDJSON
   `editCell` — a headless host applies it however makes sense for it, e.g. the CLI updates its own
@@ -241,7 +268,7 @@ no NDJSON — just a library call.
   `.ipynb` rather than silently taking over every notebook (a real concern once the Jupyter
   extension is also installed, which handles `.ipynb` for actual Python/Jupyter kernels).
 - `kernelController.ts` — one `NotebookController`
-  (`supportedLanguages = [csharp, fsharp, pysharp, ontly, ralf]`, the same "pick a language per
+  (`supportedLanguages = [csharp, fsharp, powershell, pysharp, ontly, ralf]`, the same "pick a language per
   cell" shape dotnet-interactive's polyglot notebooks used) per extension activation; one
   `HostClient`/host process per open notebook document, keyed by URI. `jupyternet.kernelPaths`
   (a setting, array of directories) is forwarded to the spawned host as `JUPYTERNET_KERNEL_PATHS`.
@@ -267,16 +294,22 @@ no NDJSON — just a library call.
   versions of the same dependency would collide (see "Why not per-plugin `AssemblyLoadContext`
   isolation" above). Native-library dependencies (e.g. under `runtimes/<rid>/native/`) still need
   the OS loader to find them through its own mechanism regardless.
-- `IVariableInjectable` is only implemented by the two builtin kernels. PySharp's own kernel has an
-  equivalent native capability (`PyEngine.SetVariable`) not yet wired to the interface — a natural
-  follow-up in that repo, not done here since nothing in this round's ask required it. Ontly/Ralf
-  have no obvious equivalent (a compiler, an agent) and likely never will.
+- `IVariableInjectable` is only implemented by the three builtin kernels. PySharp's own kernel has
+  an equivalent native capability (`PyEngine.SetVariable`) not yet wired to the interface — a
+  natural follow-up in that repo, not done here since nothing in this round's ask required it.
+  Ontly/Ralf have no obvious equivalent (a compiler, an agent) and likely never will.
 - `FSharpKernel` is not safe to run concurrently across threads (it swaps the process-global
   `Console.Out`/`Error`) — see the F# section above. Not an issue for `JupyterNet.Host`/the CLI
   (sequential by design); an embedding host must not run two `NotebookSession`s with `fsharp`
-  kernels on different threads at the same time.
+  kernels on different threads at the same time. `CSharpKernel`/`PowerShellKernel` have no such
+  constraint.
+- Builtin kernels share one dependency graph, so adding one can force a version bump in another —
+  already happened once (`Microsoft.PowerShell.SDK` forced `Microsoft.CodeAnalysis.CSharp.Scripting`
+  from `4.14.0` to `5.9.0`, see the PowerShell section above). Worth re-running the full test suite
+  after adding any future builtin kernel, not just trusting that `dotnet restore` resolving a
+  version conflict means behavior didn't change.
 - The VS Code extension compiles cleanly, `dotnet test tests/JupyterNet.Tests` passes (nbformat
-  round-tripping, both builtin kernels including variable injection, `NotebookSession` dispatch),
-  and the host/CLI (builtin kernels + all three plugins, the exact cell sequence in
+  round-tripping, all three builtin kernels including variable injection, `NotebookSession`
+  dispatch), and the host/CLI (builtin kernels + all three plugins, the exact cell sequence in
   `samples/tour.ipynb`) were exercised end to end via direct NDJSON and CLI runs *and*, separately,
   confirmed by hand in the installed extension: an F# cell in `samples/tour.ipynb`, run for real.

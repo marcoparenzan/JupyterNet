@@ -1,16 +1,17 @@
 namespace JupyterNet.Protocol;
 
 /// <summary>
-/// Kernel ids a JupyterNet notebook cell can be executed as. <see cref="CSharp"/>/<see cref="FSharp"/>
-/// are built into <c>JupyterNet.Host</c>; <see cref="PySharp"/>/<see cref="Ontly"/>/<see cref="Ralf"/>
-/// are the ids their respective plugin kernels (living in the PySharp/Ontly/RalfAI repos) declare
-/// via <c>IKernelPlugin.KernelId</c> — listed here only as the conventional defaults, not enforced
-/// by the host, since any plugin can declare any id.
+/// Kernel ids a JupyterNet notebook cell can be executed as. <see cref="CSharp"/>/<see cref="FSharp"/>/
+/// <see cref="PowerShell"/> are built into <c>JupyterNet.Host</c>; <see cref="PySharp"/>/<see cref="Ontly"/>/
+/// <see cref="Ralf"/> are the ids their respective plugin kernels (living in the PySharp/Ontly/RalfAI
+/// repos) declare via <c>IKernelPlugin.KernelId</c> — listed here only as the conventional defaults,
+/// not enforced by the host, since any plugin can declare any id.
 /// </summary>
 public static class KernelIds
 {
     public const string CSharp = "csharp";
     public const string FSharp = "fsharp";
+    public const string PowerShell = "powershell";
     public const string PySharp = "pysharp";
     public const string Ontly = "ontly";
     public const string Ralf = "ralf";

@@ -1,0 +1,6 @@
+<Project>
+  <!-- Applies to every project in the repo: NuGet package license metadata, matching the MIT LICENSE at the repo root. -->
+  <PropertyGroup>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+</Project>

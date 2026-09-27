@@ -1,9 +1,10 @@
 {
   "name": "jupyternet-notebook",
   "displayName": "JupyterNet Notebook",
-  "description": "C#, PySharp, Ontly and Ralf .ipynb notebooks in VS Code, backed by a JupyterNet.Host process.",
+  "description": "C#, F#, PowerShell, PySharp, Ontly and Ralf .ipynb notebooks in VS Code, backed by a JupyterNet.Host process.",
   "version": "0.1.0",
   "publisher": "marcoparenzan",
+  "license": "MIT",
   "engines": {
     "vscode": "^1.90.0"
   },

@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>JupyterNet.Kernels.PowerShell</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Marco Parenzan</Authors>
+    <Description>JupyterNet kernel that runs PowerShell cells on a single embedded Runspace (Microsoft.PowerShell.SDK), with session state shared across cells.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\JupyterNet.Kernels.Abstractions\JupyterNet.Kernels.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.6.6" />
+  </ItemGroup>
+
+</Project>

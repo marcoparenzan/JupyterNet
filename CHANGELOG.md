@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.4.0 — PowerShell kernel
+
+- New builtin **`powershell`** kernel (`JupyterNet.Kernels.PowerShell`, `Microsoft.PowerShell.SDK`
+  — real PowerShell 7+): one embedded `Runspace` per session, session state persists the same way
+  the other builtin kernels' does; `Write-Host`/`Write-Warning` captured via `PowerShell.Streams`
+  (no custom `PSHost` needed — PS7+ routes `Write-Host` through the Information stream
+  specifically for this); variable injection via `Runspace.SessionStateProxy.SetVariable`, with
+  real member/method access on the injected object, no unwrapping.
+- Forced a real dependency bump: `Microsoft.PowerShell.SDK` needs
+  `Microsoft.CodeAnalysis.CSharp >= 5.0.0`, conflicting with the C# kernel's pinned `4.14.0` via
+  `Microsoft.CodeAnalysis.CSharp.Scripting` — moved to `5.9.0`; the C# kernel's own test suite
+  re-verified passing after the bump, not just assumed compatible.
+- `samples/tour.ipynb` gained two PowerShell cells; `jupyternet run`/the host/the extension all
+  install/dispatch it identically to `csharp`/`fsharp`.
+
 ## 0.3.0 — headless CLI, embedding, variable injection, tests
 
 - New `JupyterNet.Engine`: `NotebookDocument` (a C# nbformat v4 reader/writer — the first one in

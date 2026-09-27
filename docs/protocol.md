@@ -50,9 +50,9 @@ is not tied to one specific request (see below) and carries `executionId: ""`.
 
 ## Kernel ids
 
-`csharp`, `fsharp`, `pysharp`, `ontly`, `ralf` — see `JupyterNet.Protocol.KernelIds` / `protocol.ts`'s
+`csharp`, `fsharp`, `powershell`, `pysharp`, `ontly`, `ralf` — see `JupyterNet.Protocol.KernelIds` / `protocol.ts`'s
 `KernelIds`. Each is a language id a notebook cell can be set to; `JupyterNet.Host` creates the
 matching `IKernel` lazily, the first time that language is used in a session, and keeps it (and
-its state) for the rest of the session. `csharp`/`fsharp` are builtin; `pysharp`/`ontly`/`ralf` are
+its state) for the rest of the session. `csharp`/`fsharp`/`powershell` are builtin; `pysharp`/`ontly`/`ralf` are
 kernel plugins discovered at startup (see ARCHITECTURE.md's "Plugin loading") — the ids here are
 each plugin's own declared `IKernelPlugin.KernelId`, not something the host enforces.

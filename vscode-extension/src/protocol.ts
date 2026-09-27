@@ -33,6 +33,8 @@ export interface HostEvent {
 
 export const KernelIds = {
     CSharp: "csharp",
+    FSharp: "fsharp",
+    PowerShell: "powershell",
     PySharp: "pysharp",
     Ontly: "ontly",
     Ralf: "ralf"

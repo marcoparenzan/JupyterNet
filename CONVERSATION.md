@@ -262,3 +262,36 @@ propagate a newly-set user environment variable to already-running processes, on
 testing it immediately in the same shell still showed "Unknown kernel" until confirmed by passing
 the variable explicitly inline. Real, worth documenting precisely because it looks like a bug the
 first time you hit it. Now documented in USAGE.md, not just done live and left unrecorded.
+
+## Adding a PowerShell kernel
+
+Marco's next ask: "Puoi aggiungere il kernel per PowerShell?" A natural fit for a fourth builtin
+".NET language" alongside C#/F# — `Microsoft.PowerShell.SDK` gives real PowerShell 7+ hosting via
+an embedded `Runspace`, the same shape as FSI's session for F#. Built and verified on the first
+attempt with no API surprises (unlike C#/F#, PowerShell's embedding API is well-documented and
+stable, so no decompiling was needed this time): session persistence, `Write-Host`/`Write-Warning`
+capture via `PowerShell.Streams` (PS7+ tags `Write-Host` output for the Information stream
+specifically so a host without a rich UI can still see it, avoiding the custom-`PSHost`
+implementation a fuller embedding would otherwise need), error handling, and variable injection via
+`Runspace.SessionStateProxy.SetVariable` all worked in the first standalone smoke test.
+
+The one real snag was a dependency conflict, not a design one: `Microsoft.PowerShell.SDK`
+transitively needs `Microsoft.CodeAnalysis.CSharp >= 5.0.0` (PowerShell uses Roslyn internally for
+its own `Add-Type` cmdlet), which collided with the C# kernel's
+`Microsoft.CodeAnalysis.CSharp.Scripting 4.14.0` pinning `Microsoft.CodeAnalysis.CSharp = 4.14.0`
+exactly — any project
+referencing both kernels (Engine, Host, Cli, Tests, EmbeddingSample) failed to restore. Fixed by
+bumping the C# kernel's scripting package to `5.9.0`; re-ran the *existing* C# kernel test suite
+before trusting it (all passing, unchanged), rather than assuming a NuGet-resolved version bump
+couldn't have changed behavior.
+
+## What was verified live, the PowerShell round
+
+- A standalone smoke test (session persistence, `Write-Host`, `Write-Warning`, a division-by-zero
+  error, and variable injection with real property/method access on the injected object) passed on
+  the first run.
+- `dotnet test tests/JupyterNet.Tests` — 26/26 passing (the original 20 plus 6 new
+  `PowerShellKernelTests`), confirming the Roslyn version bump didn't change the C# kernel's
+  behavior.
+- `jupyternet run samples/tour.ipynb` (now with two PowerShell cells added) — all six kernels in
+  the real sample notebook, exit code 0.
