@@ -18,7 +18,9 @@ $projects = @(
     "src/JupyterNet.Kernels.Abstractions/JupyterNet.Kernels.Abstractions.csproj",
     "src/JupyterNet.Kernels.CSharp/JupyterNet.Kernels.CSharp.csproj",
     "src/JupyterNet.Kernels.FSharp/JupyterNet.Kernels.FSharp.csproj",
-    "src/JupyterNet.Host/JupyterNet.Host.csproj"
+    "src/JupyterNet.Engine/JupyterNet.Engine.csproj",
+    "src/JupyterNet.Host/JupyterNet.Host.csproj",
+    "src/JupyterNet.Cli/JupyterNet.Cli.csproj"
 )
 
 foreach ($project in $projects) {

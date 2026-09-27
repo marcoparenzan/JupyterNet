@@ -9,7 +9,7 @@ namespace JupyterNet.Kernels.FSharp;
 /// session, so (unlike PySharp's <c>PyEngine</c>) cross-cell variable persistence is simply what
 /// the session already does; there is no "copy globals forward" workaround needed here.
 /// </summary>
-public sealed class FSharpKernel : IKernel
+public sealed class FSharpKernel : IKernel, IVariableInjectable
 {
     public string Id => "fsharp";
 
@@ -90,6 +90,16 @@ public sealed class FSharpKernel : IKernel
         if (diagnostics.Length > 0)
             sink.WriteText(string.Join(Environment.NewLine, diagnostics.Select(d => d.ToString())));
 
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// FSI's own, real API for exactly this — the bound name behaves like any other top-level FSI
+    /// value afterwards (usable, reassignable, visible to <c>GetBoundValues</c>).
+    /// </summary>
+    public Task SetVariableAsync(string name, object? value, CancellationToken cancellationToken)
+    {
+        _session.AddBoundValue(name, value!);
         return Task.CompletedTask;
     }
 }

@@ -1,14 +1,15 @@
 using System.Reflection;
 using JupyterNet.Kernels.Abstractions;
 
-namespace JupyterNet.Host;
+namespace JupyterNet.Engine;
 
 /// <summary>
 /// Discovers and loads external kernel plugins (PySharp/Ontly/Ralf, each living in its own engine's
-/// repo, not JupyterNet's). Search directories come from <c>JUPYTERNET_KERNEL_PATHS</c> (an OS
+/// repo, not JupyterNet's). Search directories come from <paramref name="kernelPathsOverride"/> if
+/// given (e.g. the CLI's <c>--kernel-paths</c>), else <c>JUPYTERNET_KERNEL_PATHS</c> (an OS
 /// path-list, one directory per plugin — each expected to be that plugin project's own
 /// <c>dotnet publish</c> output), falling back to scanning <c>&lt;host base dir&gt;/kernels/*</c> if
-/// that variable isn't set.
+/// neither is set.
 ///
 /// Every plugin loads into the default load context via <see cref="Assembly.LoadFrom"/>, which —
 /// specifically for this case — comes with .NET's own "LoadFrom context" dependency probing: an
@@ -28,33 +29,40 @@ namespace JupyterNet.Host;
 /// on one person's machine, not an untrusted multi-tenant plugin host — version conflicts between
 /// them are a real but much smaller risk than a host that intermittently fails to load a kernel.
 /// </summary>
-internal static class KernelPluginLoader
+public static class KernelPluginLoader
 {
-    public static IReadOnlyDictionary<string, IKernelPlugin> DiscoverPlugins(TextWriter warnings)
+    public static IReadOnlyDictionary<string, IKernelPlugin> DiscoverPlugins(TextWriter warnings, IEnumerable<string>? kernelPathsOverride = null)
     {
         var plugins = new Dictionary<string, IKernelPlugin>();
-        foreach (var directory in ResolvePluginDirectories())
+        foreach (var directory in ResolvePluginDirectories(kernelPathsOverride))
         {
             try
             {
                 var plugin = LoadPlugin(directory);
                 if (plugin is null)
                 {
-                    warnings.WriteLine($"JupyterNet.Host: no IKernelPlugin found in '{directory}', skipping.");
+                    warnings.WriteLine($"JupyterNet: no IKernelPlugin found in '{directory}', skipping.");
                     continue;
                 }
                 plugins[plugin.KernelId] = plugin;
             }
             catch (Exception ex)
             {
-                warnings.WriteLine($"JupyterNet.Host: failed to load kernel plugin from '{directory}': {ex.Message}");
+                warnings.WriteLine($"JupyterNet: failed to load kernel plugin from '{directory}': {ex.Message}");
             }
         }
         return plugins;
     }
 
-    private static IEnumerable<string> ResolvePluginDirectories()
+    private static IEnumerable<string> ResolvePluginDirectories(IEnumerable<string>? overridePaths)
     {
+        if (overridePaths is not null)
+        {
+            foreach (var path in overridePaths)
+                if (Directory.Exists(path)) yield return path;
+            yield break;
+        }
+
         var configured = Environment.GetEnvironmentVariable("JUPYTERNET_KERNEL_PATHS");
         if (!string.IsNullOrWhiteSpace(configured))
         {

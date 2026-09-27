@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>JupyterNet.Engine</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Marco Parenzan</Authors>
+    <Description>Reusable JupyterNet engine: nbformat (.ipynb) read/write, kernel plugin discovery, and NotebookSession — the kernel-dispatch/variable-injection core JupyterNet.Host, the jupyternet CLI, and any embedding application all build on.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\JupyterNet.Kernels.Abstractions\JupyterNet.Kernels.Abstractions.csproj" />
+    <ProjectReference Include="..\JupyterNet.Kernels.CSharp\JupyterNet.Kernels.CSharp.csproj" />
+    <ProjectReference Include="..\JupyterNet.Kernels.FSharp\JupyterNet.Kernels.FSharp.csproj" />
+  </ItemGroup>
+
+</Project>

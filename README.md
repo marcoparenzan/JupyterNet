@@ -14,20 +14,31 @@ kernel plugin in their own repo, matching the engine's own release cycle rather 
 | `ralf` | Plugin, from `D:\dev\MarcoParenzan\RalfAI` — RalfAI's own coding agent, embedded in-process with tools to inspect, run and edit the notebook's *other* cells. |
 
 Run code in cells, get HTML output, keep state between cells — the parts of dotnet/interactive
-that made it worth using, on top of tools already living under `D:\dev`.
+that made it worth using, on top of tools already living under `D:\dev`. JupyterNet is not only a
+VS Code extension: `JupyterNet.Engine` (nbformat read/write, kernel dispatch, plugin discovery,
+variable injection) is a standalone library, so a `.ipynb` can also be run headlessly from a
+**CLI** (`jupyternet run notebook.ipynb`) or **embedded directly in a .NET application**, which can
+inject live objects into a kernel's context — see [samples/EmbeddingSample](samples/EmbeddingSample).
 
 ## Layout
 
 - `src/JupyterNet.Protocol` — the NDJSON message contracts shared by the host and the extension.
-- `src/JupyterNet.Kernels.Abstractions` — `IKernel`/`IKernelOutputSink`/`INotebookHost`/`IKernelPlugin`,
-  the entire contract a kernel plugin implements.
+- `src/JupyterNet.Kernels.Abstractions` — `IKernel`/`IKernelOutputSink`/`INotebookHost`/
+  `IKernelPlugin`/`IVariableInjectable`, the entire contract a kernel (builtin or plugin) implements.
 - `src/JupyterNet.Kernels.{CSharp,FSharp}` — the two builtin kernels.
-- `src/JupyterNet.Host` — the process the extension spawns: reads NDJSON on stdin, runs the builtin
-  kernels, discovers and loads kernel plugins (`KernelPluginLoader.cs`), writes NDJSON on stdout.
+- `src/JupyterNet.Engine` — the reusable core: `NotebookDocument` (a C# nbformat reader/writer),
+  `NotebookSession` (kernel dispatch, plugin discovery, variable injection) — what `JupyterNet.Host`,
+  `JupyterNet.Cli`, and any embedding application all build on.
+- `src/JupyterNet.Host` — the process the VS Code extension spawns: wraps `NotebookSession` in the
+  NDJSON stdin/stdout protocol.
+- `src/JupyterNet.Cli` — `jupyternet run <notebook.ipynb>`, headless execution for CI/scripting.
 - `vscode-extension/` — the VS Code extension: notebook type `jupyternet-notebook` for `*.ipynb`
   files (real Jupyter nbformat, offered as an option rather than hijacking every notebook), one
   multi-language `NotebookController`, an HTML output renderer.
-- `samples/tour.ipynb` — a notebook exercising all five kernels.
+- `samples/tour.ipynb` — a notebook exercising all five kernels. `samples/EmbeddingSample` — a
+  console app embedding `JupyterNet.Engine` directly and injecting a live object into a cell.
+- `tests/JupyterNet.Tests` — xUnit coverage for the nbformat reader/writer, both builtin kernels
+  (including variable injection), and `NotebookSession`'s dispatch/error handling.
 - `docs/protocol.md` — the wire protocol. [ARCHITECTURE.md](ARCHITECTURE.md) — how it all fits
   together, the plugin-loading design, and known limits. [USAGE.md](USAGE.md) — install and run
   it. [CONVERSATION.md](CONVERSATION.md) — how this project came to be.
@@ -40,8 +51,12 @@ The PySharp/Ontly/Ralf kernel plugins themselves live beside the engine they wra
 ## Quick start
 
 ```powershell
-# build the host + builtin kernels
+# build everything (host, CLI, engine, builtin kernels, tests, embedding sample)
 dotnet build JupyterNet.slnx
+dotnet test tests/JupyterNet.Tests
+
+# headless: run a notebook's cells top to bottom from the CLI
+dotnet run --project src/JupyterNet.Cli -- run samples/tour.ipynb
 
 # smoke-test the host directly (see docs/protocol.md for the message shapes)
 echo '{"id":"1","method":"execute","params":{"kernel":"csharp","code":"21 * 2"}}' | dotnet run --project src/JupyterNet.Host
@@ -53,13 +68,13 @@ npm run compile
 # then F5 in VS Code to launch an Extension Development Host, and open samples/tour.ipynb
 ```
 
-To exercise the `pysharp`/`ontly`/`ralf` cells you also need those three plugins published once —
-see [USAGE.md](USAGE.md) for the exact commands and where the extension expects to find them
-(`jupyternet.kernelPaths`).
+To exercise the `pysharp`/`ontly`/`ralf` cells (in the CLI, the host, or the extension) you also
+need those three plugins published once — see [USAGE.md](USAGE.md) for the exact commands and
+where the extension/CLI expect to find them (`jupyternet.kernelPaths`/`--kernel-paths`).
 
 ## Publishing
 
 `build/pack.ps1` packs the projects that live in this repo (`JupyterNet.Protocol`,
-`Kernels.Abstractions`, `Kernels.CSharp`, `Kernels.FSharp`, `Host`) into `D:\dev\NuGetLocalFeed`.
-`build/package-extension.ps1` publishes `JupyterNet.Host` *and* the three external kernel plugins
-into `vscode-extension/host/`, then packages the extension as a `.vsix`.
+`Kernels.Abstractions`, `Kernels.CSharp`, `Kernels.FSharp`, `Engine`, `Host`, `Cli`) into
+`D:\dev\NuGetLocalFeed`. `build/package-extension.ps1` publishes `JupyterNet.Host` *and* the three
+external kernel plugins into `vscode-extension/host/`, then packages the extension as a `.vsix`.

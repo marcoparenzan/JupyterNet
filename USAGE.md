@@ -26,10 +26,11 @@
   `AIProvider`/`OpenAI`|`Anthropic`|`AzureAIFoundry` shape. Without either, `ralf` cells fail with
   a clear error instead of crashing the host.
 
-## Build and smoke-test the host
+## Build, test, and smoke-test the host
 
 ```powershell
 dotnet build JupyterNet.slnx
+dotnet test tests/JupyterNet.Tests
 ```
 
 `JupyterNet.Host` reads NDJSON requests on stdin and writes NDJSON events on stdout — see
@@ -40,6 +41,49 @@ with no further setup; `pysharp`/`ontly`/`ralf` need the plugin publish step abo
 ```powershell
 '{"id":"1","method":"execute","params":{"kernel":"csharp","code":"21 * 2"}}' | dotnet run --project src/JupyterNet.Host
 ```
+
+## Run a notebook headlessly (CLI)
+
+No VS Code, no editor — `jupyternet run` executes a `.ipynb`'s cells top to bottom and exits `0`
+only if every one of them ran without error (handy in CI, or just from a terminal):
+
+```powershell
+dotnet run --project src/JupyterNet.Cli -- run samples/tour.ipynb
+
+# pysharp/ontly/ralf need the same plugin paths as the host/extension:
+dotnet run --project src/JupyterNet.Cli -- run samples/tour.ipynb `
+  --kernel-paths "D:\dev\2026\repos\PySharp\src\JupyterNet.Kernels.PySharp\bin\publish;D:\dev\2026\repos\ontly\src\JupyterNet.Kernels.Ontly\bin\publish;D:\dev\MarcoParenzan\RalfAI\src\JupyterNet.Kernels.Ralf\bin\publish"
+
+# --output writes the executed notebook (with real outputs) elsewhere; --in-place overwrites the input
+dotnet run --project src/JupyterNet.Cli -- run samples/tour.ipynb --output executed.ipynb
+```
+
+`--fail-fast` stops at the first cell whose output is an error instead of running the rest.
+Without `--kernel-paths`, it falls back to `JUPYTERNET_KERNEL_PATHS`/the same `kernels/` default
+directory the host uses.
+
+## Embed a notebook in a .NET application
+
+[samples/EmbeddingSample](samples/EmbeddingSample) is the whole story in one file: reference
+`JupyterNet.Engine`, create a `NotebookSession`, inject a live object into a kernel's context, run
+some code that uses it.
+
+```csharp
+using JupyterNet.Engine;
+
+var session = new NotebookSession();
+await session.SetVariableAsync("csharp", "weather", new Weather());   // a plain .NET object
+await session.ExecuteAsync("csharp", "weather.City", sink, default);  // -> "Trento"
+```
+
+```powershell
+dotnet run --project samples/EmbeddingSample
+```
+
+`SetVariableAsync` only works on a kernel that implements `IVariableInjectable` — today that's
+`csharp` and `fsharp` (the two builtin kernels); a kernel that doesn't throws `NotSupportedException`
+rather than silently doing nothing. See ARCHITECTURE.md's "Engine, CLI and embedding" section for
+how each of the two actually makes an injected object usable from cell code.
 
 ## Install the VS Code extension
 
@@ -122,7 +166,7 @@ List the cells in this notebook, then run the first PySharp cell and tell me wha
 ## Packaging
 
 ```powershell
-./build/pack.ps1               # dotnet pack this repo's own projects -> D:\dev\NuGetLocalFeed
+./build/pack.ps1               # dotnet pack this repo's own projects (incl. Engine, Cli) -> D:\dev\NuGetLocalFeed
 ./build/package-extension.ps1  # publish JupyterNet.Host + the 3 plugins into vscode-extension/host + build a .vsix
 ```
 

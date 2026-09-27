@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.3.0 — headless CLI, embedding, variable injection, tests
+
+- New `JupyterNet.Engine`: `NotebookDocument` (a C# nbformat v4 reader/writer — the first one in
+  this repo outside the TypeScript extension), `NotebookSession` (kernel dispatch/plugin discovery/
+  variable injection, pulled out of `JupyterNet.Host`'s `Program.cs`). `JupyterNet.Host` is now a
+  thin NDJSON wrapper around it.
+- New `JupyterNet.Kernels.Abstractions.IVariableInjectable`: an opt-in kernel capability for
+  injecting a live .NET object into a kernel's context, reached via
+  `NotebookSession.SetVariableAsync`. Implemented by both builtin kernels — F#'s via
+  `FsiEvaluationSession.AddBoundValue` (real static-ish typing, no unwrapping needed), C#'s via a
+  one-line hidden `dynamic x = Injected["x"];` interaction (Roslyn scripting has no runtime-
+  extensible globals story otherwise).
+- New `JupyterNet.Cli` (`jupyternet run <notebook.ipynb> [--kernel-paths] [--output|--in-place]
+  [--fail-fast]`) — headless notebook execution, a minimal `nbconvert --execute` equivalent, exit
+  code reflecting success.
+- New `samples/EmbeddingSample` — a console app embedding `JupyterNet.Engine` directly (no process,
+  no NDJSON) and injecting a `Weather` object into both builtin kernels.
+- New `tests/JupyterNet.Tests` (xUnit): nbformat round-tripping, both builtin kernels (session
+  persistence, output capture, error handling, variable injection), `NotebookSession` dispatch.
+  Found two real issues while writing them: an injected object's type must be `public` (the DLR
+  binder enforces real accessibility from the script's own separately-compiled assembly), and
+  `FSharpKernel` is not safe under concurrent/parallel execution (it swaps the process-global
+  `Console.Out`/`Error`) — xUnit's default test parallelization raced on it and flaked a test;
+  fixed by disabling parallelization for this test assembly, and documented as a real constraint
+  in ARCHITECTURE.md, not just a test workaround.
+
 ## 0.2.0 — rename to JupyterNet, plugin split, F#
 
 - Renamed KerNet → **JupyterNet** throughout (namespaces, `PackageId`s, the extension's id/commands/

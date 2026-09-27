@@ -9,10 +9,12 @@ host talk NDJSON over stdio — see [docs/protocol.md](docs/protocol.md) for the
 
 Inside the host ([src/JupyterNet.Host/Program.cs](src/JupyterNet.Host/Program.cs)), a single `while`
 loop reads one request at a time and awaits it fully before reading the next — there is no
-concurrent execution of two cells in the same notebook. A dictionary maps kernel id → `IKernel`
-instance, created lazily on first use and kept for the rest of the session; that instance *is* the
-cell's session state (Roslyn's `ScriptState`, the F# `FsiEvaluationSession`, PySharp's
-`PyEngine.Globals`, the Ralf `AgentEngine`).
+concurrent execution of two cells in the same notebook. All of the actual work — the kernel
+dictionary, plugin discovery, dispatch — lives one layer down, in `JupyterNet.Engine`'s
+`NotebookSession` (see "Engine, CLI and embedding" below); `Program.cs` is now just that plus the
+NDJSON protocol wrapped around it. A kernel instance, created lazily on first use and kept for the
+rest of the session, *is* the cell's session state (Roslyn's `ScriptState`, the F#
+`FsiEvaluationSession`, PySharp's `PyEngine.Globals`, the Ralf `AgentEngine`).
 
 ## Kernels: two builtin, three plugins
 
@@ -37,7 +39,15 @@ interface IKernelPlugin
     string KernelId;
     IKernel CreateKernel(INotebookHost notebookHost);
 }
+interface IVariableInjectable
+{
+    Task SetVariableAsync(string name, object? value, CancellationToken ct);
+}
 ```
+
+`IVariableInjectable` is optional — the embedding entry point (see below); a kernel that doesn't
+implement it simply doesn't support injection, and `NotebookSession.SetVariableAsync` throws a
+clear `NotSupportedException` rather than pretending it worked.
 
 `csharp` and `fsharp` are **builtin** — compiled straight into `JupyterNet.Host`, no discovery
 needed. `pysharp`/`ontly`/`ralf` are **plugins**: each lives in its own engine's repo (PySharp/
@@ -51,6 +61,19 @@ for the first cell, `ScriptState<object>.ContinueWithAsync` for every one after,
 output explicitly; the last expression's value, if any, is also written as text via `ToString()`.
 **Known limit**: no formatter registry like dotnet-interactive's (per-type HTML formatters) —
 v1 only has `ToString()` plus explicit `Display.Html`.
+
+**Variable injection** (`IVariableInjectable.SetVariableAsync`) — the interesting constraint: Roslyn
+scripting fixes the "globals" object's *type* on the very first `RunAsync` call, so there's no
+runtime-extensible globals story to lean on directly. The globals object
+(`ScriptGlobals`) instead carries one `Injected` dictionary (a public member, reachable from script
+code by bare name like any other global), and injecting a new name runs a one-line hidden
+interaction — `dynamic weather = Injected["weather"];` — through `ScriptState.ContinueWithAsync`
+exactly like a real cell would be, so it becomes an ordinary top-level binding for every cell after
+it. `dynamic` sidesteps needing the injected object's exact (possibly non-public) type name at the
+call site — but note the DLR binder still enforces real accessibility on the *object's own type* at
+each call site: an injected instance of a `private`/non-public type will still throw a
+`RuntimeBinderException` when a cell tries to use its members (found writing this exact code's
+tests — the injected type has to be `public`).
 
 **FSharp** ([src/JupyterNet.Kernels.FSharp](src/JupyterNet.Kernels.FSharp)) — a single
 `FsiEvaluationSession` (`FSharp.Compiler.Service`) per session, a real long-lived FSI/REPL session,
@@ -74,7 +97,21 @@ gotten right that a first pass at the API didn't get for free:
   wrote to the *real* `Console.Out` — captured by swapping `Console.Out`/`Console.Error` for the
   duration of exactly one `EvalInteractionNonThrowing` call and restoring them immediately after
   (never left swapped for other kernels/cells — a permanent swap would silently break the host's
-  own protocol output for everything else).
+  own protocol output for everything else). **This makes `Console.Out`/`Error` swapping — and so
+  `FSharpKernel` itself — not safe to run concurrently from multiple threads**: two `FSharpKernel`
+  instances executing at the same time race on that shared process-global state (found by the test
+  suite: `PrintfnIsCapturedWithoutFsiEcho` flaked to empty output under xUnit's default parallel
+  test execution, passed reliably once test parallelization was disabled). Never an issue in
+  `JupyterNet.Host`/the CLI (both process one cell at a time by design), but an embedding host
+  running more than one `NotebookSession` concurrently on different threads should not do so if
+  any of them touch an `fsharp` kernel at the same time.
+
+**Variable injection** (`IVariableInjectable.SetVariableAsync`) — FSI's own, real API for exactly
+this: `FsiEvaluationSession.AddBoundValue(name, value)`. Unlike the C# kernel's `dynamic` trick,
+the bound name gets the value's *actual* runtime type (via reflection), so member access/calls
+just work with no unwrapping ceremony — confirmed with a `public` class exposing a property, a
+method and an array, all reachable directly (`weather.City`, `weather.TempC(3)`,
+`for x in weather.Forecast do ...`).
 
 **PySharp** (plugin, `D:\dev\2026\repos\PySharp\src\JupyterNet.Kernels.PySharp`) — one `PyEngine`
 per session. `PyEngine.Run` always starts a fresh `__main__` module seeded only from
@@ -98,9 +135,9 @@ sent as a prompt to a lazily-created `RalfAI.AgentEngine`, built around a custom
 (`JupyterNetNotebookContext`) whose tools (`Notebook_ListCells`/`GetCell`/`RunCell`/`SetCellCode`)
 are closures over `INotebookHost` — the host's cache of every cell's index/language/code, refreshed
 from the `cells` field the extension attaches to *every* execute request (see protocol.md).
-`Notebook_RunCell` dispatches straight back into the host's own kernel table (via
-`INotebookHost.RunCellAsync`, implemented by `NotebookHostState` in `JupyterNet.Host`), capturing
-that cell's output as plain text instead of NDJSON events. `Notebook_SetCellCode` can't touch the
+`Notebook_RunCell` dispatches straight back into the session's own kernel table (via
+`INotebookHost.RunCellAsync`, implemented by `NotebookSession` itself in `JupyterNet.Engine`),
+capturing that cell's output as plain text instead of NDJSON events. `Notebook_SetCellCode` can't touch the
 editor directly — only the extension can apply a `WorkspaceEdit` — so it sends an `editCell` event
 instead and returns immediately; the extension applies it and the *next*
 `Notebook_RunCell`/`GetCell` call sees the change (the host's cell cache is only as fresh as the
@@ -117,9 +154,10 @@ via `ProjectReference` rather than through NuGet.
 
 PySharp/Ontly/Ralf are split out of this repo on purpose: each engine's own repo should own how it
 plugs into a notebook, versioned and released on that engine's own schedule, not JupyterNet's.
-That only works if `JupyterNet.Host` can load a kernel it was never built against —
-[src/JupyterNet.Host/KernelPluginLoader.cs](src/JupyterNet.Host/KernelPluginLoader.cs) is the
-whole of that mechanism:
+That only works if the host can load a kernel it was never built against —
+[src/JupyterNet.Engine/KernelPluginLoader.cs](src/JupyterNet.Engine/KernelPluginLoader.cs) is the
+whole of that mechanism (in `JupyterNet.Engine` precisely so `JupyterNet.Host`, the CLI, and an
+embedding application all get it for free):
 
 - **Discovery**: search directories come from `JUPYTERNET_KERNEL_PATHS` (an OS path-list, one
   directory per plugin — each is that plugin project's own `dotnet publish` output), falling back
@@ -155,6 +193,43 @@ whole of that mechanism:
 
 Kernel instantiation stays lazy exactly as before — a plugin is only loaded the first time a cell
 of its kernel id actually executes in a session; `csharp`/`fsharp` need no discovery step at all.
+
+## Engine, CLI and embedding
+
+`JupyterNet.Host`'s NDJSON loop was never the only reasonable way to run a notebook — a CI job or
+a script wants to run one headlessly, and a .NET application wants to embed one directly and hand
+it live objects. Both need the same kernel dispatch/plugin discovery logic `Program.cs` used to
+own inline, so that logic moved to a standalone library, [`JupyterNet.Engine`](src/JupyterNet.Engine):
+
+- **`NotebookDocument`**/`NotebookCell`/`NotebookOutput` — a small C# nbformat v4 reader/writer,
+  the same shape `vscode-extension/src/notebookSerializer.ts` implements on the TypeScript side
+  (`source` as newline-terminated line arrays, per-cell language in
+  `metadata.vscode.languageId`, `display_data`/`error` outputs round-tripped). Nothing in this repo
+  read `.ipynb` from C# before this — only the extension's TS side did.
+- **`NotebookSession`** — the reusable engine: owns the builtin (`csharp`/`fsharp`) and
+  plugin-discovered kernels for one session, *is* the `INotebookHost` a Ralf-style kernel's tools
+  call against (`RequestCellEdit` becomes a plain `CellEditRequested` event instead of an NDJSON
+  `editCell` — a headless host applies it however makes sense for it, e.g. the CLI updates its own
+  in-memory `NotebookDocument` cell directly), and adds the two entry points a protocol-based host
+  didn't need to expose: `ExecuteCellAsync`/`ExecuteAsync` returning a plain `bool` (success — no
+  exception, no separate "did it error" flag to check on the sink), and `SetVariableAsync` — the
+  embedding entry point, delegating to a kernel's own `IVariableInjectable` if it has one.
+
+`JupyterNet.Host` ([src/JupyterNet.Host/Program.cs](src/JupyterNet.Host/Program.cs)) is now just a
+`NotebookSession` plus the NDJSON loop around it — no kernel/plugin logic of its own left.
+
+**`JupyterNet.Cli`** ([src/JupyterNet.Cli/Program.cs](src/JupyterNet.Cli/Program.cs)) —
+`jupyternet run <notebook.ipynb> [--kernel-paths ...] [--output <file>|--in-place] [--fail-fast]`:
+loads a `NotebookDocument`, runs every code cell through a `NotebookSession` in order, printing
+output to the console as it happens and (for `--output`/`--in-place`) recording it back into real
+nbformat `outputs` — a minimal `jupyter nbconvert --execute` equivalent. Exit code `0` only if
+every cell completed without an error. Hand-parsed flags, no CLI framework dependency — the same
+"no more machinery than the task needs" choice `JupyterNet.Host` itself already made.
+
+**Embedding** ([samples/EmbeddingSample](samples/EmbeddingSample)) — the whole story in one small
+console app: `new NotebookSession()`, `SetVariableAsync("csharp", "weather", new Weather())`, then
+cells that use `weather.City`/`weather.TempC(3)`/iterate `weather.Forecast` directly. No process,
+no NDJSON — just a library call.
 
 ## VS Code extension
 
@@ -192,8 +267,16 @@ of its kernel id actually executes in a session; `csharp`/`fsharp` need no disco
   versions of the same dependency would collide (see "Why not per-plugin `AssemblyLoadContext`
   isolation" above). Native-library dependencies (e.g. under `runtimes/<rid>/native/`) still need
   the OS loader to find them through its own mechanism regardless.
-- The VS Code extension compiles cleanly and the host (builtin kernels + all three plugins,
-  including the exact cell sequence in `samples/tour.ipynb`) was exercised end to end via direct
-  NDJSON smoke tests *and*, separately, confirmed by hand in the installed extension: an F# cell
-  in `samples/tour.ipynb`, run for real (at the time still showing FSI's own `val x: T = ...` echo
-  alongside `printfn` output — since quieted, see "Left alone..." above).
+- `IVariableInjectable` is only implemented by the two builtin kernels. PySharp's own kernel has an
+  equivalent native capability (`PyEngine.SetVariable`) not yet wired to the interface — a natural
+  follow-up in that repo, not done here since nothing in this round's ask required it. Ontly/Ralf
+  have no obvious equivalent (a compiler, an agent) and likely never will.
+- `FSharpKernel` is not safe to run concurrently across threads (it swaps the process-global
+  `Console.Out`/`Error`) — see the F# section above. Not an issue for `JupyterNet.Host`/the CLI
+  (sequential by design); an embedding host must not run two `NotebookSession`s with `fsharp`
+  kernels on different threads at the same time.
+- The VS Code extension compiles cleanly, `dotnet test tests/JupyterNet.Tests` passes (nbformat
+  round-tripping, both builtin kernels including variable injection, `NotebookSession` dispatch),
+  and the host/CLI (builtin kernels + all three plugins, the exact cell sequence in
+  `samples/tour.ipynb`) were exercised end to end via direct NDJSON and CLI runs *and*, separately,
+  confirmed by hand in the installed extension: an F# cell in `samples/tour.ipynb`, run for real.

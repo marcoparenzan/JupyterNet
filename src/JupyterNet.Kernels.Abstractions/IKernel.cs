@@ -26,6 +26,19 @@ public interface IKernel
 }
 
 /// <summary>
+/// A kernel that lets a host inject a live .NET object into its context under a name, so notebook
+/// cells can use it directly — the embedding story: an application creating its own
+/// <c>NotebookSession</c> can hand a notebook a real object (a service, a config, live data)
+/// instead of the notebook only ever seeing what it can construct itself. Optional: not every
+/// kernel can support this (a kernel's host, e.g. <c>JupyterNet.Engine.NotebookSession</c>, should
+/// treat a kernel that doesn't implement this as simply not supporting injection).
+/// </summary>
+public interface IVariableInjectable
+{
+    Task SetVariableAsync(string name, object? value, CancellationToken cancellationToken);
+}
+
+/// <summary>
 /// The entire contract an external kernel plugin (PySharp/Ontly/Ralf — each living in its own
 /// engine's repo, not JupyterNet's) exposes to JupyterNet.Host. One public, parameterless-
 /// constructor class per plugin assembly implements this; the host finds it by scanning the

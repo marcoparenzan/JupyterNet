@@ -9,16 +9,15 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <PackageId>JupyterNet.Host</PackageId>
+    <PackageId>JupyterNet.Cli</PackageId>
     <Version>0.1.0</Version>
     <Authors>Marco Parenzan</Authors>
-    <Description>JupyterNet's kernel host: reads NDJSON execute requests on stdin, runs the builtin csharp/fsharp kernels plus any kernel plugins found via JUPYTERNET_KERNEL_PATHS (PySharp/Ontly/Ralf live in their own repos), writes NDJSON output events on stdout.</Description>
+    <Description>Headless CLI for JupyterNet: runs a .ipynb notebook's cells top to bottom without VS Code, for CI or scripting. Built on JupyterNet.Engine, the same engine JupyterNet.Host and any embedding application use.</Description>
     <PackAsTool>true</PackAsTool>
-    <ToolCommandName>jupyternet-host</ToolCommandName>
+    <ToolCommandName>jupyternet</ToolCommandName>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\JupyterNet.Protocol\JupyterNet.Protocol.csproj" />
     <ProjectReference Include="..\JupyterNet.Engine\JupyterNet.Engine.csproj" />
   </ItemGroup>
 

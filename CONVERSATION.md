@@ -180,3 +180,68 @@ expression cells go silent (`greeting.ToUpper()` printing nothing at all), unlik
 kernel here. Fixed and verified before shipping: `printfn` output alone, then the bare value for
 an expression cell, then a divide-by-zero still reported as a proper `WriteError` — no leftover
 `val x: T = ...` noise anywhere.
+
+## Headless CLI, embedding, variable injection, real tests
+
+Marco's next ask: run a notebook from a CLI (no VS Code), embed one in a .NET application with the
+ability to inject live objects into a kernel's context, and back it all with real samples and
+tests rather than this session's manual NDJSON scripts.
+
+The shared blocker for the first two: `JupyterNet.Host`'s `Program.cs` owned kernel dispatch and
+plugin discovery inline — nothing reusable outside the NDJSON loop. That logic moved to a new
+library, `JupyterNet.Engine` (`NotebookSession` for dispatch, plus a new `NotebookDocument` — the
+first C# nbformat reader/writer in this repo, everything before this read `.ipynb` from the
+TypeScript extension side only). `JupyterNet.Host` shrank to a thin wrapper around it; a new
+`JupyterNet.Cli` and `samples/EmbeddingSample` are built on the same `NotebookSession` with nothing
+extra to duplicate.
+
+Variable injection (`IVariableInjectable.SetVariableAsync`) needed a genuinely different mechanism
+per kernel:
+
+- **F#** had a real, existing answer: `FsiEvaluationSession.AddBoundValue(name, value)`, found the
+  same way `EvalInteractionNonThrowing` was gotten right earlier — decompiling
+  `FSharp.Compiler.Service.dll` rather than guessing. It binds the value using its *actual* runtime
+  type via reflection, so member access on the injected object just works, no casting or unwrap
+  ceremony.
+- **C#** had no equivalent — Roslyn scripting fixes the globals object's type on the very first
+  `RunAsync` call, so there's no way to add a new statically-typed global at runtime. The fix: a
+  globals object carrying one `Injected` dictionary (reachable from script code by bare name, since
+  Roslyn exposes the globals object's public members that way), and each newly-injected name gets a
+  hidden one-line interaction — `dynamic weather = Injected["weather"];` — run through
+  `ScriptState.ContinueWithAsync` exactly like a real cell, so it becomes an ordinary top-level
+  binding for every cell after it.
+
+Writing the xUnit test suite (`tests/JupyterNet.Tests`) surfaced two real bugs neither manual
+testing nor the standalone smoke scripts this session relied on before had caught:
+
+1. **The C# injection test used a `private` nested class** for the injected object. It failed with
+   a `RuntimeBinderException` — the DLR binder enforces real accessibility from the script's own
+   separately-compiled submission assembly, so an injected object's type has to be `public`,
+   regardless of `dynamic` sidestepping the *name*. Fixed by moving the test's `Weather` class to a
+   public top-level type (matching what `samples/EmbeddingSample`'s own `Weather` already was).
+2. **A genuinely flaky test** — `PrintfnIsCapturedWithoutFsiEcho` sometimes came back with an empty
+   output collection. Root cause: `FSharpKernel` swaps the process-wide `Console.Out`/`Error` for
+   the duration of each evaluation (how `printfn` output gets captured — see the FSI-echo fix
+   above); xUnit runs different test classes in parallel by default, so two `FSharpKernel`
+   instances evaluating on different threads at the same time raced on that shared global and
+   corrupted each other's output. Not a test artifact to paper over — a real constraint of the
+   kernel itself, documented in ARCHITECTURE.md (an embedding host must not run concurrent
+   `NotebookSession`s that both touch `fsharp` on different threads) and worked around for the test
+   suite by disabling xUnit's parallelization for this assembly (`CollectionBehavior
+  (DisableTestParallelization = true)`) — `JupyterNet.Host`/the CLI were never at risk since both
+  already process one cell at a time by design.
+
+## What was verified live, the CLI/embedding round
+
+- `dotnet test tests/JupyterNet.Tests` — 20/20 passing (nbformat round-trip, both builtin kernels
+  including injection, `NotebookSession` dispatch/error handling), after fixing the two issues above.
+- `jupyternet run samples/tour.ipynb` (the CLI) with all five kernels via `--kernel-paths` —
+  identical cell-by-cell output to the NDJSON-level test from the previous round, including a real
+  Ralf turn using its notebook tools; `--output` confirmed to write real nbformat `outputs` back
+  (a genuine `nbconvert --execute` equivalent); `--fail-fast` confirmed to stop after the first
+  broken cell in a deliberately-broken 3-cell notebook, with exit code 1.
+- `samples/EmbeddingSample` run directly: an injected `Weather` object's property read, method
+  call, iteration, and mutation all confirmed working from both the `csharp` and `fsharp` kernels
+  in the same session.
+- `dotnet build JupyterNet.slnx` — the full solution (Engine/Cli/Host/EmbeddingSample/Tests/builtin
+  kernels) builds clean.
