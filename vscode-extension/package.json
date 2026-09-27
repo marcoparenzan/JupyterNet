@@ -1,7 +1,7 @@
 {
   "name": "kernet-notebook",
   "displayName": "KerNet Notebook",
-  "description": "C#, PySharp, Ontly and Ralf notebooks in VS Code, backed by a KerNet.Host process.",
+  "description": "C#, PySharp, Ontly and Ralf .ipynb notebooks in VS Code, backed by a KerNet.Host process.",
   "version": "0.1.0",
   "publisher": "marcoparenzan",
   "engines": {
@@ -17,7 +17,8 @@
       {
         "type": "kernet-notebook",
         "displayName": "KerNet Notebook",
-        "selector": [{ "filenamePattern": "*.kernet" }]
+        "priority": "option",
+        "selector": [{ "filenamePattern": "*.ipynb" }]
       }
     ],
     "notebookRenderer": [

@@ -2,7 +2,7 @@
 
 ## Process shape
 
-One `KerNet.Host` process per open `.kernet` notebook, spawned by the VS Code extension
+One `KerNet.Host` process per open `.ipynb` notebook, spawned by the VS Code extension
 (`KerNetController.getClient`, [vscode-extension/src/kernelController.ts](vscode-extension/src/kernelController.ts))
 and killed when the notebook closes or "KerNet: Restart Kernel Host" is run. The extension and the
 host talk NDJSON over stdio — see [docs/protocol.md](docs/protocol.md) for the exact messages.
@@ -80,8 +80,13 @@ why that step existed and what it touched in the RalfAI repo (metadata only, no 
 
 ## VS Code extension
 
-- `notebookSerializer.ts` — the `.kernet` file format: `{ "cells": [{ "kind", "language", "value" }] }`,
-  nothing fancier.
+- `notebookSerializer.ts` — real Jupyter nbformat v4 (`.ipynb`), so a KerNet notebook opens, diffs
+  and renders like any other notebook file. Per-cell language (nbformat has no field for one
+  language per cell — it assumes one language for the whole file) is stored under each cell's
+  `metadata.vscode.languageId`, the convention VS Code's own built-in notebook tooling uses for the
+  same gap. `priority: "option"` in `package.json` means KerNet is offered as a choice for `.ipynb`
+  rather than silently taking over every notebook (a real concern once the Jupyter extension is
+  also installed, which handles `.ipynb` for actual Python/Jupyter kernels).
 - `kernelController.ts` — one `NotebookController` (`supportedLanguages = [csharp, pysharp, ontly, ralf]`,
   the same "pick a language per cell" shape dotnet-interactive's polyglot notebooks used) per
   extension activation; one `HostClient`/host process per open notebook document, keyed by URI.

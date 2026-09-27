@@ -5,7 +5,7 @@ left unscratched once it stopped being developed. KerNet doesn't reinvent langua
 four things Marco Parenzan already built into one notebook experience.
 
 | Cell language | Backed by |
-|---|---|
+| --- | --- |
 | `csharp` | Roslyn scripting (`Microsoft.CodeAnalysis.CSharp.Scripting`) — a REPL-style C#, variables persist across cells. |
 | `pysharp` | PySharp (`D:\dev\2026\repos\PySharp`) — a Python 3 interpreter written from scratch in C#, embedded via `PySharpLib.PyEngine`. |
 | `ontly` | Ontly (`D:\dev\2026\repos\ontly`) — a YAML domain-contract compiler; a cell is a contract, the output is its generated C#/Python. |
@@ -21,9 +21,10 @@ that made it worth using, on top of tools already living under `D:\dev`.
 - `src/KerNet.Kernels.{CSharp,PySharp,Ontly,Ralf}` — one kernel per language.
 - `src/KerNet.Host` — the process the extension spawns: reads NDJSON on stdin, dispatches to the
   four kernels, writes NDJSON on stdout.
-- `vscode-extension/` — the VS Code extension: notebook type `kernet-notebook` (`*.kernet` files),
-  one multi-language `NotebookController`, an HTML output renderer.
-- `samples/tour.kernet` — a notebook exercising all four kernels.
+- `vscode-extension/` — the VS Code extension: notebook type `kernet-notebook` for `*.ipynb` files
+  (real Jupyter nbformat, offered as an option rather than hijacking every notebook), one
+  multi-language `NotebookController`, an HTML output renderer.
+- `samples/tour.ipynb` — a notebook exercising all four kernels.
 - `docs/protocol.md` — the wire protocol. [ARCHITECTURE.md](ARCHITECTURE.md) — how it all fits
   together and its known limits. [USAGE.md](USAGE.md) — install and run it.
   [CONVERSATION.md](CONVERSATION.md) — how this project came to be.
@@ -41,7 +42,7 @@ echo '{"id":"1","method":"execute","params":{"kernel":"csharp","code":"21 * 2"}}
 cd vscode-extension
 npm install
 npm run compile
-# then F5 in VS Code to launch an Extension Development Host, and open samples/tour.kernet
+# then F5 in VS Code to launch an Extension Development Host, and open samples/tour.ipynb
 ```
 
 ## Publishing

@@ -34,10 +34,15 @@ npm run compile
 ```
 
 Then, in VS Code, open the `vscode-extension` folder and press F5 (`launch.json` is already set
-up — it runs `npm: compile` first and opens `samples/tour.kernet` in the new window). In that
+up — it runs `npm: compile` first and opens `samples/tour.ipynb` in the new window). In that
 window:
 
-- Run **KerNet: New Notebook**, or open `samples/tour.kernet` from the repo root.
+- `.ipynb` is registered with `priority: "option"` (see [ARCHITECTURE.md](ARCHITECTURE.md)) —
+  KerNet is offered as a choice, not forced as the default, so if another extension (e.g. Jupyter)
+  also handles `.ipynb` you may need **right-click → Open With... → KerNet Notebook** the first
+  time, or set `"workbench.editorAssociations": { "*.ipynb": "kernet-notebook" }` to make it the
+  default for every `.ipynb` in that workspace.
+- Run **KerNet: New Notebook**, or open `samples/tour.ipynb` from the repo root.
 - Each cell picks its language from VS Code's usual cell-language picker: `csharp`, `pysharp`,
   `ontly` or `ralf`.
 - Run a cell with the usual ▷ button/`Ctrl+Enter`. The first cell of a session starts a

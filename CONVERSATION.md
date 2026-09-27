@@ -77,9 +77,25 @@ the `ralf` kernel's tools can know what else is in the notebook without a separa
   substitutes that in `launch.json`/`tasks.json`, not in arbitrary extension settings) — replaced
   with an `resolveHostDll` fallback in `kernelController.ts` that checks the filesystem itself
   (bundled path → repo Debug/Release build → error), and added a proper `launch.json` so F5 in
-  `vscode-extension/` actually runs `npm: compile` then opens `samples/tour.kernet`.
+  `vscode-extension/` actually runs `npm: compile` then opens `samples/tour.ipynb`.
 - **Still not verified**: an actual Extension Development Host session (F5) with a cell run by
   hand. An attempt to script this via `code --extensionDevelopmentPath=... --new-window ...` from
   the sandboxed shell opened a plain new window without the dev flags taking effect (most likely
   argument handling by the `code` CLI shim in that shell, not a problem with the extension) — worth
   retrying directly from a normal terminal/VS Code's own F5, not through that path.
+
+## Switching the file format to real `.ipynb`
+
+Marco pushed back on the invented `.kernet` JSON format: "il notebook è sempre ipynb" — notebooks
+are always `.ipynb`, full stop. `notebookSerializer.ts` was rewritten to read/write real Jupyter
+nbformat v4 (cells, `source` as an array of newline-terminated lines, `outputs`, `nbformat`/
+`nbformat_minor`), including round-tripping outputs (`display_data`/`error`) so saved notebooks
+keep their results like any other `.ipynb`. Per-cell language — something plain nbformat has no
+field for, since it assumes one language for the whole notebook — is stored under each cell's
+`metadata.vscode.languageId`, the same convention VS Code's own built-in notebook tooling uses for
+that exact gap, rather than inventing a KerNet-specific key.
+
+Registering `*.ipynb` also meant addressing what happens when the Jupyter extension (or another
+notebook extension) is installed and already claims `.ipynb`: `package.json`'s `notebooks`
+contribution now sets `"priority": "option"`, so KerNet is offered as a choice via "Open With..."
+rather than silently taking over every notebook in the workspace.

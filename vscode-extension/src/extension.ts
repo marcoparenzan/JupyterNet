@@ -23,7 +23,7 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand("kernet.restartHost", () => {
             const editor = vscode.window.activeNotebookEditor;
             if (!editor) {
-                vscode.window.showWarningMessage("KerNet: open a .kernet notebook first.");
+                vscode.window.showWarningMessage("KerNet: open a KerNet notebook first.");
                 return;
             }
             controller.disposeClient(editor.notebook);
