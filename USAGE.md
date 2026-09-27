@@ -59,7 +59,7 @@ dotnet tool update --global --add-source D:\dev\NuGetLocalFeed JupyterNet.Cli
 jupyternet run samples/tour.ipynb
 # or, without installing: dotnet run --project src/JupyterNet.Cli -- run samples/tour.ipynb
 
-# pysharp/ontly/ralf need the same plugin paths as the host/extension:
+# pysharp/ontly/ralf need the same plugin paths as the host/extension — either pass them every time:
 jupyternet run samples/tour.ipynb --kernel-paths "D:\dev\2026\repos\PySharp\src\JupyterNet.Kernels.PySharp\bin\publish;D:\dev\2026\repos\ontly\src\JupyterNet.Kernels.Ontly\bin\publish;D:\dev\MarcoParenzan\RalfAI\src\JupyterNet.Kernels.Ralf\bin\publish"
 
 # --output writes the executed notebook (with real outputs) elsewhere; --in-place overwrites the input
@@ -67,6 +67,20 @@ jupyternet run samples/tour.ipynb --output executed.ipynb
 ```
 
 `--fail-fast` stops at the first cell whose output is an error instead of running the rest.
+
+**To avoid typing `--kernel-paths` every time**, set it once as a persistent user environment
+variable instead — every `jupyternet`/`JupyterNet.Host` invocation falls back to it automatically:
+
+```powershell
+[Environment]::SetEnvironmentVariable('JUPYTERNET_KERNEL_PATHS',
+  'D:\dev\2026\repos\PySharp\src\JupyterNet.Kernels.PySharp\bin\publish;D:\dev\2026\repos\ontly\src\JupyterNet.Kernels.Ontly\bin\publish;D:\dev\MarcoParenzan\RalfAI\src\JupyterNet.Kernels.Ralf\bin\publish',
+  'User')
+```
+
+Windows only applies this to *new* processes — it won't reach a terminal that was already open
+when you set it (a real quirk hit while writing this: setting it and testing in the same shell
+still showed "Unknown kernel"). Open a new terminal (or restart VS Code, for the extension) before
+expecting it to take effect. Already set this way on this machine.
 Without `--kernel-paths`, it falls back to `JUPYTERNET_KERNEL_PATHS`/the same `kernels/` default
 directory the host uses.
 

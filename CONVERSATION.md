@@ -245,3 +245,20 @@ testing nor the standalone smoke scripts this session relied on before had caugh
   in the same session.
 - `dotnet build JupyterNet.slnx` — the full solution (Engine/Cli/Host/EmbeddingSample/Tests/builtin
   kernels) builds clean.
+
+## Installing the CLI for real, and a Windows environment-variable quirk
+
+Marco asked "La CLI?" after trying it via `dotnet run` — the actual ask underneath was for it to be
+a real command, so it was packed and `dotnet tool install --global`-ed as `jupyternet`, the same
+pattern PySharp/Ontly/RalfAI already use for their own CLIs. He then hit the friction that motivated
+it in the first place: `jupyternet run tour.ipynb` without `--kernel-paths` fails every
+pysharp/ontly/ralf cell with "Unknown kernel" — expected (no plugin paths configured), but annoying
+to retype every time for a supposedly-installed command.
+
+Fix: set `JUPYTERNET_KERNEL_PATHS` as a **persistent user environment variable** on this machine
+(`[Environment]::SetEnvironmentVariable(..., 'User')`), pointing at the same three plugin publish
+folders. Verified working — but not in the *same* terminal session it was set from: Windows doesn't
+propagate a newly-set user environment variable to already-running processes, only to new ones, so
+testing it immediately in the same shell still showed "Unknown kernel" until confirmed by passing
+the variable explicitly inline. Real, worth documenting precisely because it looks like a bug the
+first time you hit it. Now documented in USAGE.md, not just done live and left unrecorded.
