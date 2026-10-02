@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\JupyterNet.Engine\JupyterNet.Engine.csproj" />
+    <ProjectReference Include="..\..\src\JupyterNet.Protocol\JupyterNet.Protocol.csproj" />
     <ProjectReference Include="..\..\src\JupyterNet.Kernels.CSharp\JupyterNet.Kernels.CSharp.csproj" />
     <ProjectReference Include="..\..\src\JupyterNet.Kernels.FSharp\JupyterNet.Kernels.FSharp.csproj" />
     <ProjectReference Include="..\..\src\JupyterNet.Kernels.PowerShell\JupyterNet.Kernels.PowerShell.csproj" />

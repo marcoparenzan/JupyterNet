@@ -8,7 +8,7 @@
 
   <PropertyGroup>
     <PackageId>JupyterNet.Kernels.PowerShell</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Authors>Marco Parenzan</Authors>
     <Description>JupyterNet kernel that runs PowerShell cells on a single embedded Runspace (Microsoft.PowerShell.SDK), with session state shared across cells.</Description>
   </PropertyGroup>

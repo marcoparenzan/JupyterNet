@@ -10,7 +10,7 @@
 
   <PropertyGroup>
     <PackageId>JupyterNet.Cli</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Authors>Marco Parenzan</Authors>
     <Description>Headless CLI for JupyterNet: runs a .ipynb notebook's cells top to bottom without VS Code, for CI or scripting. Built on JupyterNet.Engine, the same engine JupyterNet.Host and any embedding application use.</Description>
     <PackAsTool>true</PackAsTool>

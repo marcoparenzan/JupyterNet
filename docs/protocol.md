@@ -33,6 +33,8 @@ is not tied to one specific request (see below) and carries `executionId: ""`.
 // Zero or more per execution, in order. mimeType is "text/plain" or "text/html".
 { "event": "output", "executionId": "3", "mimeType": "text/plain", "data": "2" }
 { "event": "output", "executionId": "3", "mimeType": "text/html",  "data": "<b>hi</b>" }
+// Images: binary payloads are base64 and flagged with "encoding" (image/png, image/jpeg, ...).
+{ "event": "output", "executionId": "3", "mimeType": "image/png", "encoding": "base64", "data": "iVBORw0K..." }
 
 // A kernel reported a failure. Does not by itself end the execution — the host still always
 // follows with exactly one "complete" (its status reflects whether any "error" event was sent).

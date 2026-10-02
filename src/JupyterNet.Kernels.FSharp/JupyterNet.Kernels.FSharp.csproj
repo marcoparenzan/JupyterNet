@@ -8,7 +8,7 @@
 
   <PropertyGroup>
     <PackageId>JupyterNet.Kernels.FSharp</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Authors>Marco Parenzan</Authors>
     <Description>JupyterNet kernel that runs F# cells via FSharp.Compiler.Service's interactive (FSI) session, with session state shared across cells for free (a real REPL session, unlike PySharp's PyEngine).</Description>
   </PropertyGroup>

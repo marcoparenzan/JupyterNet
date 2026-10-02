@@ -8,7 +8,7 @@
 
   <PropertyGroup>
     <PackageId>JupyterNet.Kernels.Abstractions</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Authors>Marco Parenzan</Authors>
     <Description>IKernel / IKernelOutputSink contracts every JupyterNet.Kernels.* implementation targets.</Description>
   </PropertyGroup>

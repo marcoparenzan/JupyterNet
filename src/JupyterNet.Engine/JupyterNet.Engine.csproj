@@ -8,7 +8,7 @@
 
   <PropertyGroup>
     <PackageId>JupyterNet.Engine</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Authors>Marco Parenzan</Authors>
     <Description>Reusable JupyterNet engine: nbformat (.ipynb) read/write, kernel plugin discovery, and NotebookSession — the kernel-dispatch/variable-injection core JupyterNet.Host, the jupyternet CLI, and any embedding application all build on.</Description>
   </PropertyGroup>

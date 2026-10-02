@@ -12,6 +12,9 @@ internal sealed class NdjsonOutputSink(TextWriter stdout, string executionId) : 
     public void WriteHtml(string html) =>
         NdjsonProtocol.WriteEvent(stdout, HostEvent.Output(executionId, MimeTypes.Html, html));
 
+    public void WriteImage(string mimeType, byte[] data) =>
+        NdjsonProtocol.WriteEvent(stdout, HostEvent.OutputBinary(executionId, mimeType, data));
+
     public void WriteError(string message, string? stackTrace = null) =>
         NdjsonProtocol.WriteEvent(stdout, HostEvent.Error(executionId, message, stackTrace));
 }

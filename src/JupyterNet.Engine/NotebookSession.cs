@@ -128,6 +128,7 @@ internal sealed class ErrorTrackingSink(IKernelOutputSink inner) : IKernelOutput
     public bool HasError { get; private set; }
     public void WriteText(string text) => inner.WriteText(text);
     public void WriteHtml(string html) => inner.WriteHtml(html);
+    public void WriteImage(string mimeType, byte[] data) => inner.WriteImage(mimeType, data);
     public void WriteError(string message, string? stackTrace = null)
     {
         HasError = true;
@@ -142,6 +143,7 @@ internal sealed class BufferingSink : IKernelOutputSink
 
     public void WriteText(string text) => _text.AppendLine(text);
     public void WriteHtml(string html) => _text.AppendLine(html);
+    public void WriteImage(string mimeType, byte[] data) => _text.AppendLine($"[{mimeType}, {data.Length} bytes]");
 
     public void WriteError(string message, string? stackTrace = null)
     {

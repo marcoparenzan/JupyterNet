@@ -128,6 +128,8 @@ export class JupyterNetController implements vscode.Disposable {
     private toOutputItem(evt: HostEvent): vscode.NotebookCellOutputItem | undefined {
         switch (evt.event) {
             case "output":
+                if (evt.encoding === "base64")
+                    return new vscode.NotebookCellOutputItem(Buffer.from(evt.data ?? "", "base64"), evt.mimeType ?? "application/octet-stream");
                 return vscode.NotebookCellOutputItem.text(evt.data ?? "", evt.mimeType ?? "text/plain");
             case "error": {
                 const error = new Error(evt.message ?? "Unknown error");

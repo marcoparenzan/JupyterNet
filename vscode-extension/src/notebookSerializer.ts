@@ -12,7 +12,7 @@ interface NbOutput {
     output_type: "stream" | "error" | "execute_result" | "display_data";
     name?: string;
     text?: string[];
-    data?: Record<string, string[]>;
+    data?: Record<string, string[] | string>;
     ename?: string;
     evalue?: string;
     traceback?: string[];
@@ -71,6 +71,11 @@ export class JupyterNetNotebookSerializer implements vscode.NotebookSerializer {
     }
 }
 
+/** Mime types whose nbformat payload is base64 rather than text. */
+function isBinaryMime(mime: string): boolean {
+    return (mime.startsWith("image/") && mime !== "image/svg+xml") || mime === "application/pdf";
+}
+
 function emptyNotebook(): NbFormat {
     return { cells: [], metadata: {}, nbformat: 4, nbformat_minor: 5 };
 }
@@ -107,9 +112,12 @@ function toNbOutput(output: vscode.NotebookCellOutput): NbOutput {
         };
     }
 
-    const data: Record<string, string[]> = {};
+    const data: Record<string, string[] | string> = {};
     for (const item of output.items) {
-        data[item.mime] = splitSource(Buffer.from(item.data).toString("utf8"));
+        // nbformat stores binary mimes (image/png, image/jpeg, ...) as base64 text; svg is plain text.
+        data[item.mime] = isBinaryMime(item.mime)
+            ? Buffer.from(item.data).toString("base64")
+            : splitSource(Buffer.from(item.data).toString("utf8"));
     }
     return { output_type: "display_data", data, metadata: {} };
 }
@@ -126,6 +134,9 @@ function fromNbOutput(output: NbOutput): vscode.NotebookCellOutput {
         return new vscode.NotebookCellOutput([vscode.NotebookCellOutputItem.text(joinSource(output.text), "text/plain")]);
     }
 
-    const items = Object.entries(output.data ?? {}).map(([mime, lines]) => vscode.NotebookCellOutputItem.text(joinSource(lines), mime));
+    const items = Object.entries(output.data ?? {}).map(([mime, lines]) =>
+        isBinaryMime(mime)
+            ? new vscode.NotebookCellOutputItem(Buffer.from(joinSource(lines).replace(/\s+/g, ""), "base64"), mime)
+            : vscode.NotebookCellOutputItem.text(joinSource(lines), mime));
     return new vscode.NotebookCellOutput(items);
 }

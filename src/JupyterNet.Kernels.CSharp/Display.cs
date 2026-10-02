@@ -12,4 +12,7 @@ public static class Display
     public static void Html(string html) => CurrentSink.Value?.WriteHtml(html);
 
     public static void Text(string text) => CurrentSink.Value?.WriteText(text);
+
+    /// <summary>Shows an image, e.g. <c>Display.Image(File.ReadAllBytes("a.png"))</c>.</summary>
+    public static void Image(byte[] data, string mimeType = "image/png") => CurrentSink.Value?.WriteImage(mimeType, data);
 }

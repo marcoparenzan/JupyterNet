@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.0 — image output
+
+- `IKernelOutputSink.WriteImage(mimeType, bytes)` — kernels can now emit real images. A default
+  interface implementation falls back to an inline `<img>` data-URI through `WriteHtml`, so existing
+  sinks and plugins keep working unchanged.
+- Wire protocol: an `output` event may carry `"encoding": "base64"` with binary `data`
+  (`image/png`, `image/jpeg`, ...); the extension turns it into a native `NotebookCellOutputItem`, so
+  VS Code renders it without a custom renderer. `.ipynb` round-trips images as nbformat base64
+  `image/png` entries (and loads them back as bytes).
+- All packages (`Abstractions`, `Protocol`, `Engine`, `Host`, builtin kernels) bumped to 0.2.0.
+
 ## 0.4.0 — PowerShell kernel
 
 - New builtin **`powershell`** kernel (`JupyterNet.Kernels.PowerShell`, `Microsoft.PowerShell.SDK`

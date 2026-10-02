@@ -10,6 +10,15 @@ public interface IKernelOutputSink
     void WriteText(string text);
     void WriteHtml(string html);
     void WriteError(string message, string? stackTrace = null);
+
+    /// <summary>
+    /// Emits a binary image (<c>image/png</c>, <c>image/jpeg</c>, ...). The default implementation
+    /// falls back to an inline <c>&lt;img&gt;</c> data-URI through <see cref="WriteHtml"/>, so a sink written
+    /// before images existed — or a kernel talking to one — keeps working; sinks that can carry real
+    /// binary output (the NDJSON host sink) override it.
+    /// </summary>
+    void WriteImage(string mimeType, byte[] data)
+        => WriteHtml($"<img src=\"data:{mimeType};base64,{Convert.ToBase64String(data)}\" />");
 }
 
 /// <summary>

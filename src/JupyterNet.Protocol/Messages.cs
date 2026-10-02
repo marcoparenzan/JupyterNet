@@ -47,10 +47,15 @@ public sealed record HostEvent(
     string? StackTrace = null,
     string? Status = null,
     int? CellIndex = null,
-    string? NewCode = null)
+    string? NewCode = null,
+    string? Encoding = null)
 {
     public static HostEvent Output(string executionId, string mimeType, string data) =>
         new("output", executionId, MimeType: mimeType, Data: data);
+
+    /// <summary>A binary output (an image): <see cref="Data"/> is base64 and <see cref="Encoding"/> says so.</summary>
+    public static HostEvent OutputBinary(string executionId, string mimeType, byte[] data) =>
+        new("output", executionId, MimeType: mimeType, Data: Convert.ToBase64String(data), Encoding: "base64");
 
     public static HostEvent Error(string executionId, string message, string? stackTrace = null) =>
         new("error", executionId, Message: message, StackTrace: stackTrace);
@@ -71,4 +76,7 @@ public static class MimeTypes
 {
     public const string PlainText = "text/plain";
     public const string Html = "text/html";
+    public const string Png = "image/png";
+    public const string Jpeg = "image/jpeg";
+    public const string Svg = "image/svg+xml";
 }

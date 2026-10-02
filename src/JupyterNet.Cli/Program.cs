@@ -93,6 +93,12 @@ internal sealed class ConsoleOutputSink : IKernelOutputSink
         Outputs.Add(NotebookOutput.Display("text/html", html));
     }
 
+    public void WriteImage(string mimeType, byte[] data)
+    {
+        Console.WriteLine($"[{mimeType}, {data.Length} bytes]");
+        Outputs.Add(NotebookOutput.Display(mimeType, Convert.ToBase64String(data)));
+    }
+
     public void WriteError(string message, string? stackTrace = null)
     {
         Console.Error.WriteLine(message);

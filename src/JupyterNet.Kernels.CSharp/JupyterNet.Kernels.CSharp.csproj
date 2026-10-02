@@ -8,7 +8,7 @@
 
   <PropertyGroup>
     <PackageId>JupyterNet.Kernels.CSharp</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Authors>Marco Parenzan</Authors>
     <Description>JupyterNet kernel that runs C# cells via Roslyn scripting, with session state shared across cells.</Description>
   </PropertyGroup>
