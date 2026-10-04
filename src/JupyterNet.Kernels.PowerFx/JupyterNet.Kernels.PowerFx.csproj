@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>JupyterNet.Kernels.PowerFx</PackageId>
+    <Version>0.2.0</Version>
+    <Authors>Marco Parenzan</Authors>
+    <Description>JupyterNet kernel that evaluates Power Fx formulas on a single RecalcEngine, with session state (named formulas/Set()) shared across cells.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\JupyterNet.Kernels.Abstractions\JupyterNet.Kernels.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.PowerFx.Interpreter" Version="1.8.1" />
+  </ItemGroup>
+
+</Project>

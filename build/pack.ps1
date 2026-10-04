@@ -3,8 +3,8 @@
 # PySharp/Ontly/RalfAI already publish to (see NuGet.Config at the repo root).
 #
 # The three kernel plugins (PySharp/Ontly/Ralf) live in their own repos now — this only packs
-# what actually lives here: the protocol, the plugin contract, and the three builtin kernels
-# (csharp/fsharp/powershell) plus the host itself.
+# what actually lives here: the protocol, the plugin contract, and the four builtin kernels
+# (csharp/fsharp/powershell/powerfx) plus the host itself.
 param(
     [string]$Configuration = "Release",
     [string]$OutputFeed = "D:\dev\NuGetLocalFeed"
@@ -19,6 +19,7 @@ $projects = @(
     "src/JupyterNet.Kernels.CSharp/JupyterNet.Kernels.CSharp.csproj",
     "src/JupyterNet.Kernels.FSharp/JupyterNet.Kernels.FSharp.csproj",
     "src/JupyterNet.Kernels.PowerShell/JupyterNet.Kernels.PowerShell.csproj",
+    "src/JupyterNet.Kernels.PowerFx/JupyterNet.Kernels.PowerFx.csproj",
     "src/JupyterNet.Engine/JupyterNet.Engine.csproj",
     "src/JupyterNet.Host/JupyterNet.Host.csproj",
     "src/JupyterNet.Cli/JupyterNet.Cli.csproj"

@@ -4,7 +4,7 @@ import * as vscode from "vscode";
 import { HostClient } from "./hostClient";
 import { HostEvent, NotebookCellSnapshot } from "./protocol";
 
-const SUPPORTED_LANGUAGES = ["csharp", "fsharp", "powershell", "pysharp", "ontly", "ralf"];
+const SUPPORTED_LANGUAGES = ["csharp", "fsharp", "powershell", "powerfx", "pysharp", "ontly", "ralf"];
 
 /**
  * One `NotebookController` for all four JupyterNet languages (matching how a polyglot notebook picks

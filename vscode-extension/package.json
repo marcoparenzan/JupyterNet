@@ -1,7 +1,7 @@
 {
   "name": "jupyternet-notebook",
   "displayName": "JupyterNet Notebook",
-  "description": "C#, F#, PowerShell, PySharp, Ontly and Ralf .ipynb notebooks in VS Code, backed by a JupyterNet.Host process.",
+  "description": "C#, F#, PowerShell, Power Fx, PySharp, Ontly and Ralf .ipynb notebooks in VS Code, backed by a JupyterNet.Host process.",
   "version": "0.1.0",
   "publisher": "marcoparenzan",
   "license": "MIT",
@@ -33,6 +33,7 @@
     "languages": [
       { "id": "csharp", "extensions": [".cs"] },
       { "id": "fsharp", "extensions": [".fs"] },
+      { "id": "powerfx", "aliases": ["Power Fx"] },
       { "id": "pysharp", "aliases": ["PySharp"] },
       { "id": "ontly", "aliases": ["Ontly"] },
       { "id": "ralf", "aliases": ["Ralf"] }

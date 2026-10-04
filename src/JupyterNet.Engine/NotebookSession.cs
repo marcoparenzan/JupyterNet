@@ -2,12 +2,13 @@ using JupyterNet.Kernels.Abstractions;
 using JupyterNet.Kernels.CSharp;
 using JupyterNet.Kernels.FSharp;
 using JupyterNet.Kernels.PowerShell;
+using JupyterNet.Kernels.PowerFx;
 
 namespace JupyterNet.Engine;
 
 /// <summary>
 /// The reusable engine behind every JupyterNet host: owns the builtin (<c>csharp</c>/<c>fsharp</c>/
-/// <c>powershell</c>) and discovered-plugin kernels for one notebook session, dispatches cell execution to them, and
+/// <c>powershell</c>/<c>powerfx</c>) and discovered-plugin kernels for one notebook session, dispatches cell execution to them, and
 /// is itself the <see cref="INotebookHost"/> a Ralf-style kernel's tools call against. Used by
 /// <c>JupyterNet.Host</c> (wrapping it in the NDJSON protocol), the <c>jupyternet</c> CLI (wrapping
 /// it in a headless run loop), and directly by any embedding application — see
@@ -38,7 +39,7 @@ public sealed class NotebookSession : INotebookHost
 
     /// <summary>
     /// Gets (creating and caching on first use, exactly like a builtin kernel) the kernel for
-    /// <paramref name="kernelId"/> — <c>csharp</c>/<c>fsharp</c>/<c>powershell</c> directly,
+    /// <paramref name="kernelId"/> — <c>csharp</c>/<c>fsharp</c>/<c>powershell</c>/<c>powerfx</c> directly,
     /// anything else from a discovered plugin. Throws if the id matches neither; callers executing
     /// a cell should prefer <see cref="ExecuteAsync"/>, which turns that into a normal
     /// <see cref="IKernelOutputSink.WriteError"/>.
@@ -51,6 +52,7 @@ public sealed class NotebookSession : INotebookHost
             KernelIdsLocal.CSharp => new CSharpKernel(),
             KernelIdsLocal.FSharp => new FSharpKernel(),
             KernelIdsLocal.PowerShell => new PowerShellKernel(),
+            KernelIdsLocal.PowerFx => new PowerFxKernel(),
             _ when _plugins.TryGetValue(kernelId, out var plugin) => plugin.CreateKernel(this),
             _ => throw new InvalidOperationException($"Unknown kernel '{kernelId}'.")
         };
@@ -120,6 +122,7 @@ internal static class KernelIdsLocal
     public const string CSharp = "csharp";
     public const string FSharp = "fsharp";
     public const string PowerShell = "powershell";
+    public const string PowerFx = "powerfx";
 }
 
 /// <summary>Wraps a sink to track whether <see cref="IKernelOutputSink.WriteError"/> was ever called, regardless of which concrete sink a caller passed in.</summary>

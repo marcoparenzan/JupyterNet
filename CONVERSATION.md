@@ -295,3 +295,87 @@ couldn't have changed behavior.
   behavior.
 - `jupyternet run samples/tour.ipynb` (now with two PowerShell cells added) — all six kernels in
   the real sample notebook, exit code 0.
+
+## Adding a PowerFx kernel, and per-language samples
+
+Marco's next ask: "Aggiungi un Kernel per PowerFx. Aggiungi anche dei samples specifici per ogni
+linguaggio" — a fifth builtin kernel on `Microsoft.PowerFx.Interpreter`'s `RecalcEngine`, plus one
+sample notebook per kernel language instead of only the combined `samples/tour.ipynb`.
+
+Power Fx turned out to be the first builtin kernel where the underlying engine's own model doesn't
+match the other four's "a cell is a script of statements" shape at all — a cell is *one formula*,
+same grain as a Power Apps formula bar — and that mismatch produced three real, sequential bugs,
+each only found by actually running code against the real `RecalcEngine` (decompiled via ilspycmd
+first, same discipline as the F#/PowerShell kernels, but the decompile alone didn't predict any of
+these three):
+
+1. **Locale-sensitive parsing.** The same formula that parses fine on an en-US machine fails
+   outright on this machine's own it-IT culture, which expects `;` instead of `,` as the
+   function-argument separator. Fixed by pinning `ParserOptions.Culture` to
+   `CultureInfo.InvariantCulture`.
+2. **`Set()` on a brand-new name.** Power Fx's native `Set` function can only *update* a name the
+   engine already knows the type of — it rejects an unknown name at bind time, and the obvious
+   workaround (pre-declare the name as an untyped `Blank` first) just trades that error for a
+   later one ("Invalid argument type (Decimal). Expecting a Blank value instead.") once a real
+   value gets assigned — a Power Fx variable's type, once fixed by its first `UpdateVariable` call,
+   doesn't widen. Fixed by having the kernel itself recognize a whole cell matching
+   `Set(name, expr)`, evaluating `expr` on its own and calling `UpdateVariable(name, value)`
+   directly — Power Fx's own `Set` binder is never involved for this case at all.
+3. **Culture leaking back into output.** Once (1) was fixed, a *parsed* formula like
+   `Round(19.99 * 3, 2)` evaluated correctly but *printed* as `59,97` — plain `ToObject()?.
+   ToString()` on the result silently goes through `CultureInfo.CurrentCulture` (it-IT), even
+   though parsing had been pinned to invariant. Fixed by formatting any `IFormattable` result
+   through `CultureInfo.InvariantCulture` explicitly, the same way parsing already was.
+
+A fourth bug surfaced only once PowerFx cells were tried through the *real* `JupyterNet.Host`/
+`jupyternet` CLI rather than the standalone scratch console app used to find the first three:
+`Microsoft.PowerFx.Core` builds its own error messages through a `CultureInfo.
+CreateSpecificCulture("en")` call internally, which throws outright under .NET's
+`InvariantGlobalization` runtime mode — turning a clean division-by-zero/syntax-error
+`WriteError` into a raw, confusing .NET exception. Both `JupyterNet.Host.csproj` and
+`JupyterNet.Cli.csproj` had `<InvariantGlobalization>true</InvariantGlobalization>` set — leftover
+boilerplate from this repo's very first commit, before any kernel existed, buying nothing (both
+publish framework-dependent, so no trimming/size benefit). Removed from both; re-verified the full
+regression sequence (`Set`, both error cases, string functions, variable injection, `Text()` with
+a custom format) through the actual host process this time, not just the kernel in isolation —
+the project's own `JupyterNet.Tests` has no such setting, so `dotnet test` alone would never have
+caught this one.
+
+Variable injection (`IVariableInjectable.SetVariableAsync`) came out simpler than feared:
+`TypeMarshallerCache.Marshal` reflects an object's public properties into a Power Fx record
+directly, no custom glue needed — but *only* properties, since Power Fx has no concept of calling
+a CLR instance method from a formula. `weather.City` works exactly like every other kernel;
+`weather.TempC(3)` simply isn't a thing Power Fx can do, a real difference documented in
+ARCHITECTURE.md rather than treated as a gap to close.
+
+**Per-language samples**: `samples/{csharp,fsharp,powershell,powerfx,pysharp,ontly,ralf}.ipynb`,
+one notebook per kernel, each demonstrating that language's own idioms (LINQ and records for C#;
+list pipelines and pattern matching for F#; the object pipeline and `Get-Date` for PowerShell;
+`Set`/`If`/`Text` for Power Fx; a pandas `DataFrame` auto-displaying via `_repr_html_` for PySharp;
+a standalone contract for Ontly; a prompt plus a C# cell for Ralf to inspect/run for Ralf) rather
+than the single shared "hello" pattern `tour.ipynb` uses for all of them. Every cell in every one
+of the seven notebooks was run for real (via NDJSON against `JupyterNet.Host` for the plugin
+kernels, via the CLI for the four builtin ones) before being written into the final `.ipynb` files
+— including catching the `Text()`/`InvariantGlobalization` bug above, which first showed up as the
+PowerFx sample's last cell failing under `jupyternet run` despite passing every one of its earlier,
+narrower smoke tests.
+
+## What was verified live, the PowerFx round
+
+- A standalone smoke test covering `Set` (both fresh-name and increment-pattern), arithmetic,
+  `Concatenate`/`Upper`, a division-by-zero error, a syntax error, and variable injection
+  (`weather.City` via `TypeMarshallerCache.Marshal`) — all passing after the three fixes above.
+- `dotnet test tests/JupyterNet.Tests` — 36/36 passing (30 prior plus 6 new
+  `PowerFxKernelTests`, including a regression test for the culture-formatting bug).
+- Every cell of all seven `samples/*.ipynb` notebooks (including the now-combined `tour.ipynb`)
+  run through `jupyternet run --fail-fast`, exit code 0 on every one — the plugin-kernel notebooks
+  (`pysharp`/`ontly`/`ralf`) via NDJSON against `JupyterNet.Host` directly with
+  `JUPYTERNET_KERNEL_PATHS` set, confirming the `InvariantGlobalization` fix didn't regress anything
+  already working.
+- `dotnet build JupyterNet.slnx` clean; `./build/pack.ps1` repacked all nine JupyterNet packages
+  (including the new `JupyterNet.Kernels.PowerFx`) to `D:\dev\NuGetLocalFeed`; the global
+  `jupyternet` tool uninstalled and reinstalled (it was still on a stale `0.1.0`, predating even
+  the PowerShell kernel — `dotnet tool update` alone would not have caught that either) and
+  re-verified running the PowerFx sample; `./build/package-extension.ps1` repackaged the `.vsix`
+  with the new kernel and all three plugins bundled, and the extension reinstalled under its
+  existing id.

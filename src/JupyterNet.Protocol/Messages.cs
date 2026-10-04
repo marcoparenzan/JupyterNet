@@ -12,6 +12,7 @@ public static class KernelIds
     public const string CSharp = "csharp";
     public const string FSharp = "fsharp";
     public const string PowerShell = "powershell";
+    public const string PowerFx = "powerfx";
     public const string PySharp = "pysharp";
     public const string Ontly = "ontly";
     public const string Ralf = "ralf";

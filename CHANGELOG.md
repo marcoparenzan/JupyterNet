@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.6.0 — PowerFx kernel, per-language samples
+
+- New builtin **`powerfx`** kernel (`JupyterNet.Kernels.PowerFx`, `Microsoft.PowerFx.Interpreter`):
+  one `RecalcEngine` per session; a cell is one formula, the same grain a Power Apps formula bar
+  works at. `ParserOptions.Culture` is pinned to the invariant culture — the host machine's own
+  `it-IT` culture otherwise expects `;` instead of `,` as the argument separator, breaking every
+  formula outright.
+- `Set(name, expr)` cells are handled by the kernel itself rather than delegated to Power Fx's own
+  `Set` function: Power Fx's native `Set` can only update a name whose type it already knows, and
+  pre-declaring a new name as an untyped `Blank` just turns the "unknown name" bind error into a
+  later "Invalid argument type (Decimal). Expecting a Blank value instead." type-mismatch error
+  once a real value is assigned — a Power Fx variable's type is fixed for good at its first
+  `UpdateVariable` call. The kernel instead evaluates `expr` on its own and calls
+  `UpdateVariable(name, value)` directly, which both declares a brand-new name (typed from the
+  value itself) and updates an existing one, with Power Fx's own `Set` binder never involved.
+- Variable injection (`IVariableInjectable.SetVariableAsync`) via `TypeMarshallerCache.Marshal` —
+  properties only, not methods, since Power Fx has no concept of calling a CLR instance method
+  from a formula. A real, by-design difference from the other three builtin kernels, not a gap.
+- Removed `<InvariantGlobalization>true</InvariantGlobalization>` from `JupyterNet.Host.csproj` and
+  `JupyterNet.Cli.csproj` (leftover, unused boilerplate from this repo's first commit — both publish
+  framework-dependent, so it bought nothing). `Microsoft.PowerFx.Core` builds its own error messages
+  through a `CultureInfo.CreateSpecificCulture` call that throws outright under that mode, turning
+  a clean division-by-zero/syntax-error `WriteError` into a raw .NET exception — found by running a
+  PowerFx error cell through the real host, not caught by `dotnet test` since the test project has
+  no such setting.
+- `samples/tour.ipynb` gained two PowerFx cells. New per-language sample notebooks
+  (`samples/{csharp,fsharp,powershell,powerfx,pysharp,ontly,ralf}.ipynb`), one per kernel, each
+  demonstrating that kernel's own specific features rather than the single combined tour.
+
 ## 0.5.0 — image output
 
 - `IKernelOutputSink.WriteImage(mimeType, bytes)` — kernels can now emit real images. A default

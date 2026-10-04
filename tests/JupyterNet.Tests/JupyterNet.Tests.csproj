@@ -24,6 +24,7 @@
     <ProjectReference Include="..\..\src\JupyterNet.Kernels.CSharp\JupyterNet.Kernels.CSharp.csproj" />
     <ProjectReference Include="..\..\src\JupyterNet.Kernels.FSharp\JupyterNet.Kernels.FSharp.csproj" />
     <ProjectReference Include="..\..\src\JupyterNet.Kernels.PowerShell\JupyterNet.Kernels.PowerShell.csproj" />
+    <ProjectReference Include="..\..\src\JupyterNet.Kernels.PowerFx\JupyterNet.Kernels.PowerFx.csproj" />
   </ItemGroup>
 
 </Project>

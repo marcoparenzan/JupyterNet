@@ -16,7 +16,7 @@ NDJSON protocol wrapped around it. A kernel instance, created lazily on first us
 rest of the session, *is* the cell's session state (Roslyn's `ScriptState`, the F#
 `FsiEvaluationSession`, PySharp's `PyEngine.Globals`, the Ralf `AgentEngine`).
 
-## Kernels: three builtin, three plugins
+## Kernels: four builtin, three plugins
 
 `IKernel`/`IKernelOutputSink`/`IKernelPlugin`
 ([src/JupyterNet.Kernels.Abstractions](src/JupyterNet.Kernels.Abstractions)) is the entire contract
@@ -49,7 +49,7 @@ interface IVariableInjectable
 implement it simply doesn't support injection, and `NotebookSession.SetVariableAsync` throws a
 clear `NotSupportedException` rather than pretending it worked.
 
-`csharp`, `fsharp` and `powershell` are **builtin** — compiled straight into `JupyterNet.Host`, no
+`csharp`, `fsharp`, `powershell` and `powerfx` are **builtin** — compiled straight into `JupyterNet.Host`, no
 discovery needed. `pysharp`/`ontly`/`ralf` are **plugins**: each lives in its own engine's repo
 (PySharp/Ontly/RalfAI), builds a small project implementing `IKernelPlugin`, and gets loaded into
 the host at runtime — see "Plugin loading" below for why they're split out this way and how it
@@ -140,6 +140,51 @@ special one. Unlike `FSharpKernel`, `PowerShellKernel` never touches `Console.Ou
 capture goes through `PowerShell.Streams`/the pipeline's return objects instead), so it has none of
 `FSharpKernel`'s concurrent-execution constraint.
 
+**PowerFx** ([src/JupyterNet.Kernels.PowerFx](src/JupyterNet.Kernels.PowerFx)) — a single
+`RecalcEngine` (`Microsoft.PowerFx.Interpreter`) per session. The grain is different from every
+other kernel here: a cell is *one formula*, not a script of statements — the same thing a Power
+Apps formula bar evaluates, with `ParserOptions.Culture` pinned to
+`CultureInfo.InvariantCulture` so a notebook parses the same way regardless of the host machine's
+own culture (found by actually hitting it: the same cell that parses fine on an en-US machine fails
+outright on an it-IT one, which expects `;` instead of `,` as the function-argument separator).
+**`Set(name, expr)`, the common "assign a session variable" cell, is implemented by the kernel
+itself rather than delegated to Power Fx's own `Set` function.** Power Fx's native `Set` can only
+*update* a name the engine already knows the type of — it rejects a brand-new name at bind time
+("Name isn't valid"), and pre-declaring that name as an untyped `Blank` first just moves the
+failure to a later type-mismatch error ("Invalid argument type (Decimal). Expecting a Blank value
+instead.") once `Set` tries to assign a real value into it; a Power Fx variable's type, once fixed
+by its first `UpdateVariable` call, doesn't widen. So a whole cell matching `Set(name, expr)` is
+recognized by the kernel, `expr` is evaluated on its own, and the result goes straight into
+`_engine.UpdateVariable(name, value)` — which both declares a brand-new name (typed correctly, from
+the value itself) and updates an existing one, with Power Fx's own `Set` binder never involved
+either way. `EnableSetFunction()` stays enabled regardless, so nested/advanced `Set()` calls
+(inside an `If`/`With`, say) against an *already-declared* name still have a chance of working
+natively; a `Set()` nested that way against a brand-new name is a known, undocumented limitation
+(out of scope for what a notebook cell normally does).
+
+**`Microsoft.PowerFx.Core` and `InvariantGlobalization` don't mix.** `JupyterNet.Host.csproj`/
+`JupyterNet.Cli.csproj` both had `<InvariantGlobalization>true</InvariantGlobalization>` set —
+unrelated boilerplate from this repo's very first commit, before any kernel existed, kept with no
+particular reason (both are published framework-dependent, so it bought no actual trimming/size
+benefit). Under that mode, Power Fx's *own error-message formatting* — not just `Text()`'s
+custom-format path — calls `CultureInfo.CreateSpecificCulture("en")` internally and throws ("Only
+the invariant culture is supported in globalization-invariant mode"), so something as basic as a
+division-by-zero or a syntax-error cell stopped producing a clean `WriteError` and instead surfaced
+a raw, confusing .NET exception. Found by actually running a PowerFx error cell through the real
+`JupyterNet.Host` — the kernel's own test project has no such setting, so `dotnet test` alone never
+would have caught it; worth remembering for any future builtin kernel that leans on another
+library's own resource/localization machinery. Fixed by removing the setting from both `.csproj`
+files, re-verified against the full regression sequence (`Set`, errors, string functions, variable
+injection) run through the actual host process, not just the kernel in isolation.
+
+**Variable injection** (`IVariableInjectable.SetVariableAsync`) — primitives go through
+`FormulaValue.New(...)` directly; anything else through `TypeMarshallerCache.Marshal`, which
+reflects an object's public *properties* into a Power Fx record. **Properties only** — Power Fx has
+no concept of calling an arbitrary CLR instance method from a formula, by design (a closed formula
+language, not a scripting one) — so `weather.City` works here exactly like every other kernel, but
+`weather.TempC(3)` does not. That's a real difference in what this kernel can do with an injected
+object, not a bug to fix.
+
 **PySharp** (plugin, `D:\dev\2026\repos\PySharp\src\JupyterNet.Kernels.PySharp`) — one `PyEngine`
 per session. `PyEngine.Run` always starts a fresh `__main__` module seeded only from
 `PyEngine.Globals`, so there is no built-in "REPL" mode: `PySharpKernel` gets the same effect
@@ -219,7 +264,7 @@ embedding application all get it for free):
   the interaction above first.
 
 Kernel instantiation stays lazy exactly as before — a plugin is only loaded the first time a cell
-of its kernel id actually executes in a session; `csharp`/`fsharp`/`powershell` need no discovery step at all.
+of its kernel id actually executes in a session; `csharp`/`fsharp`/`powershell`/`powerfx` need no discovery step at all.
 
 ## Engine, CLI and embedding
 
@@ -233,7 +278,7 @@ own inline, so that logic moved to a standalone library, [`JupyterNet.Engine`](s
   (`source` as newline-terminated line arrays, per-cell language in
   `metadata.vscode.languageId`, `display_data`/`error` outputs round-tripped). Nothing in this repo
   read `.ipynb` from C# before this — only the extension's TS side did.
-- **`NotebookSession`** — the reusable engine: owns the builtin (`csharp`/`fsharp`/`powershell`) and
+- **`NotebookSession`** — the reusable engine: owns the builtin (`csharp`/`fsharp`/`powershell`/`powerfx`) and
   plugin-discovered kernels for one session, *is* the `INotebookHost` a Ralf-style kernel's tools
   call against (`RequestCellEdit` becomes a plain `CellEditRequested` event instead of an NDJSON
   `editCell` — a headless host applies it however makes sense for it, e.g. the CLI updates its own
@@ -268,7 +313,7 @@ no NDJSON — just a library call.
   `.ipynb` rather than silently taking over every notebook (a real concern once the Jupyter
   extension is also installed, which handles `.ipynb` for actual Python/Jupyter kernels).
 - `kernelController.ts` — one `NotebookController`
-  (`supportedLanguages = [csharp, fsharp, powershell, pysharp, ontly, ralf]`, the same "pick a language per
+  (`supportedLanguages = [csharp, fsharp, powershell, powerfx, pysharp, ontly, ralf]`, the same "pick a language per
   cell" shape dotnet-interactive's polyglot notebooks used) per extension activation; one
   `HostClient`/host process per open notebook document, keyed by URI. `jupyternet.kernelPaths`
   (a setting, array of directories) is forwarded to the spawned host as `JUPYTERNET_KERNEL_PATHS`.
@@ -294,10 +339,12 @@ no NDJSON — just a library call.
   versions of the same dependency would collide (see "Why not per-plugin `AssemblyLoadContext`
   isolation" above). Native-library dependencies (e.g. under `runtimes/<rid>/native/`) still need
   the OS loader to find them through its own mechanism regardless.
-- `IVariableInjectable` is only implemented by the three builtin kernels. PySharp's own kernel has
-  an equivalent native capability (`PyEngine.SetVariable`) not yet wired to the interface — a
-  natural follow-up in that repo, not done here since nothing in this round's ask required it.
-  Ontly/Ralf have no obvious equivalent (a compiler, an agent) and likely never will.
+- `IVariableInjectable` is only implemented by the four builtin kernels, and the PowerFx kernel's
+  own implementation only exposes an injected object's *properties* (no methods — see the PowerFx
+  section above). PySharp's own kernel has an equivalent native capability
+  (`PyEngine.SetVariable`) not yet wired to the interface — a natural follow-up in that repo, not
+  done here since nothing in this round's ask required it. Ontly/Ralf have no obvious equivalent
+  (a compiler, an agent) and likely never will.
 - `FSharpKernel` is not safe to run concurrently across threads (it swaps the process-global
   `Console.Out`/`Error`) — see the F# section above. Not an issue for `JupyterNet.Host`/the CLI
   (sequential by design); an embedding host must not run two `NotebookSession`s with `fsharp`
@@ -309,7 +356,7 @@ no NDJSON — just a library call.
   after adding any future builtin kernel, not just trusting that `dotnet restore` resolving a
   version conflict means behavior didn't change.
 - The VS Code extension compiles cleanly, `dotnet test tests/JupyterNet.Tests` passes (nbformat
-  round-tripping, all three builtin kernels including variable injection, `NotebookSession`
+  round-tripping, all four builtin kernels including variable injection, `NotebookSession`
   dispatch), and the host/CLI (builtin kernels + all three plugins, the exact cell sequence in
   `samples/tour.ipynb`) were exercised end to end via direct NDJSON and CLI runs *and*, separately,
   confirmed by hand in the installed extension: an F# cell in `samples/tour.ipynb`, run for real.

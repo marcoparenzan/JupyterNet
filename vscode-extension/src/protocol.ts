@@ -37,6 +37,7 @@ export const KernelIds = {
     CSharp: "csharp",
     FSharp: "fsharp",
     PowerShell: "powershell",
+    PowerFx: "powerfx",
     PySharp: "pysharp",
     Ontly: "ontly",
     Ralf: "ralf"
