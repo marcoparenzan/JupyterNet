@@ -48,6 +48,9 @@ inject live objects into a kernel's context — see [samples/EmbeddingSample](sa
 - `docs/protocol.md` — the wire protocol. [ARCHITECTURE.md](ARCHITECTURE.md) — how it all fits
   together, the plugin-loading design, and known limits. [USAGE.md](USAGE.md) — install and run
   it. [CONVERSATION.md](CONVERSATION.md) — how this project came to be.
+  [docs/pandas-in-notebooks.md](docs/pandas-in-notebooks.md) and
+  [docs/cvintro-course.md](docs/cvintro-course.md) — running pandas/numpy/OpenCV/torch-backed
+  PySharp notebooks, including the full 61-notebook cvintro course.
 
 The PySharp/Ontly/Ralf kernel plugins themselves live beside the engine they wrap:
 `D:\dev\2026\repos\PySharp\src\JupyterNet.Kernels.PySharp`,
