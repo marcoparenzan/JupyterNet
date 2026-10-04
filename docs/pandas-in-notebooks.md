@@ -43,12 +43,11 @@ by_region["sum"].plot.bar(title="Revenue by region")    # <- shown as an inline 
 
 Series/DataFrame/Index/MultiIndex, selection (`loc`/`iloc`/masks), arithmetic with index alignment, reductions, missing data, sorting, `apply`/`map`/`agg`,
 the `.str` accessor, `groupby`, `merge`/`join`/`concat`, `pivot_table`/`pivot`/`melt`/`crosstab`/`stack`/`unstack`/`get_dummies`, `rolling`/`expanding`/`ewm`/`rank`,
-categoricals (`category` dtype, `pd.cut`, `pd.qcut`), `read_csv`/`to_csv`/`read_json`/`to_json`/`to_dict`, and the plot kinds `line`, `bar`, `barh`, `hist`, `scatter`, `area`, `pie`, `box`.
+categoricals (`category` dtype, `pd.cut`, `pd.qcut`), dates, time zones and periods (`Timestamp`, `pd.to_datetime`, `pd.date_range`, `.dt`, `resample`, `rolling('7D')`, `parse_dates=`, `tz_convert`, `Period`), `query`/`eval`, `read_csv`/`to_csv`/`read_json`/`to_json`/`to_dict`, and the plot kinds `line`, `bar`, `barh`, `hist`, `scatter`, `area`, `pie`, `box`, `kde`.
 
 ## Limits worth knowing
 
-- Not implemented: datetime and nullable dtypes (planned), Excel/Parquet/SQL IO, `eval`/`query`, `plot.kde`,
-  `read_csv(parse_dates=...)`, MultiIndex columns in `stack`/`unstack`. Unsupported features raise `NotImplementedError` with the name of the missing piece.
+- Not implemented: nullable dtypes, Excel/Parquet/SQL IO, MultiIndex columns in `stack`/`unstack`. Unsupported features raise `NotImplementedError` with the name of the missing piece.
 - `.values` / `np.asarray` work for numeric and bool columns (NDSharp has no object arrays).
 - Plot rendering is not pixel-identical to matplotlib's Agg backend (layout agrees to about a pixel); numbers and labels are the same.
 - HTML output is produced for frames with a flat index and flat columns; a frame with a MultiIndex is shown as text.
