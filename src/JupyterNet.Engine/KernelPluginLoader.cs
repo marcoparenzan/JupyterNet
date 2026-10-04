@@ -1,4 +1,6 @@
 using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Runtime.Loader;
 using JupyterNet.Kernels.Abstractions;
 
 namespace JupyterNet.Engine;
@@ -84,9 +86,45 @@ public static class KernelPluginLoader
             .FirstOrDefault(dll => File.Exists(Path.ChangeExtension(dll, ".deps.json")));
         if (mainAssemblyPath is null) return null;
 
+        RegisterNativeProbing(directory);
         var assembly = Assembly.LoadFrom(mainAssemblyPath);
         var pluginType = assembly.GetTypes().FirstOrDefault(t =>
             typeof(IKernelPlugin).IsAssignableFrom(t) && t is { IsAbstract: false, IsInterface: false });
         return pluginType is null ? null : (IKernelPlugin)Activator.CreateInstance(pluginType)!;
+    }
+
+    private static readonly List<string> NativeDirectories = new();
+    private static bool _nativeHooked;
+
+    /// <summary>LoadFrom resolves managed dependencies next to the plugin but not native ones (SkiaSharp, OpenCvSharp, ...),
+    /// so probe the plugin's <c>runtimes/&lt;rid&gt;/native</c> folder and its root for them.</summary>
+    private static void RegisterNativeProbing(string directory)
+    {
+        lock (NativeDirectories)
+        {
+            var rid = RuntimeInformation.RuntimeIdentifier;
+            var arch = RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant();
+            var os = OperatingSystem.IsWindows() ? "win" : OperatingSystem.IsMacOS() ? "osx" : "linux";
+            NativeDirectories.Add(Path.Combine(directory, "runtimes", $"{os}-{arch}", "native"));
+            NativeDirectories.Add(Path.Combine(directory, "runtimes", rid, "native"));
+            NativeDirectories.Add(directory);
+            if (_nativeHooked) return;
+            _nativeHooked = true;
+            AssemblyLoadContext.Default.ResolvingUnmanagedDll += (_, name) =>
+            {
+                string[] candidates = OperatingSystem.IsWindows() ? new[] { name, name + ".dll" }
+                    : OperatingSystem.IsMacOS() ? new[] { name, name + ".dylib", "lib" + name + ".dylib" }
+                    : new[] { name, name + ".so", "lib" + name + ".so" };
+                string[] dirs;
+                lock (NativeDirectories) dirs = NativeDirectories.ToArray();
+                foreach (var dir in dirs)
+                    foreach (var c in candidates)
+                    {
+                        var path = Path.Combine(dir, c);
+                        if (File.Exists(path) && NativeLibrary.TryLoad(path, out var handle)) return handle;
+                    }
+                return IntPtr.Zero;
+            };
+        }
     }
 }

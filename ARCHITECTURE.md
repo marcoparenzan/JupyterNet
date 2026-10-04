@@ -241,7 +241,15 @@ embedding application all get it for free):
   here. `LoadFrom` comes with .NET's own "LoadFrom context" dependency probing: a dependency that
   can't otherwise be resolved is looked for beside the assembly that requested it, so everything
   `dotnet publish` copied into a plugin's own folder (project-reference dependencies like
-  PySharpLib included) is found automatically, no resolver code needed.
+  PySharpLib included) is found automatically, no resolver code needed. This covers *managed*
+  dependencies only — a *native* one (SkiaSharp, OpenCvSharp, the libraries PySharp's own
+  numpy/cv2/matplotlib support need) isn't found this way, since `LoadFrom`'s probing is specific
+  to the CLR assembly resolver. `KernelPluginLoader` additionally hooks
+  `AssemblyLoadContext.Default.ResolvingUnmanagedDll` once, probing each loaded plugin's own
+  `runtimes/<rid>/native/` folder and its root for the requested native library by name — the same
+  thing .NET's own native-dependency resolution does automatically for a *referenced* package, done
+  by hand here because a `LoadFrom`-loaded plugin's native dependencies aren't wired into that
+  mechanism either.
 - **Discovery of the plugin type itself**: once a plugin's main assembly is loaded, the host scans
   its types for one implementing `IKernelPlugin` and instantiates it via its parameterless
   constructor — nothing to register or configure beyond that class existing.
